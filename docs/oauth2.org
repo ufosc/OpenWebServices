@@ -1,0 +1,364 @@
+:PROPERTIES:
+:ID:       9279367D-1505-4AB6-8FD0-49D0792EE1EA
+:END:
+#+TITLE: OAuth2 Notes
+#+CREATED: [2023-10-09 Mon 12:11]
+* Design Goals
+ * Support for both static and dynamic web-based clients.
+ * Data non-exclusivity: if it belongs to the resource-owner, then it should be accessible to anyone who has the resource owner's permission.
+ * Support for individual & organizational entities: username/password for users, public/private API key pairs for organizations.
+ * Convenient verification of UF student status: programs can verify that a user is a student without deanonymizing.
+* Definitions
+** OpenWebServices (OWS)
+Open Source Club web services project. This includes the OSC authentication servers (i.e. this project).
+** Resource Owner
+#+BEGIN_QUOTE
+An entity capable of granting access to a protected resource. When the resource owner is a person, it is referred to as an end-user.
+#+END_QUOTE
+Source: [[https://datatracker.ietf.org/doc/html/rfc6749#section-1.1][1.1 RFC6749]]
+** Resource Server
+#+BEGIN_QUOTE
+The server hosting the protected resources, capable of accepting and responding to protected resource requests using access tokens.
+#+END_QUOTE
+Source: [[https://datatracker.ietf.org/doc/html/rfc6749#section-1.1][1.1 RFC6749]]
+** Client
+#+BEGIN_QUOTE
+An application making protected resource requests on behalf of the resource owner and with its authorization.  The term "client" does not imply any particular implementation characteristics (e.g., whether the application executes on a server, a desktop, or other devices).
+#+END_QUOTE
+Source: [[https://datatracker.ietf.org/doc/html/rfc6749#section-1.1][1.1 RFC6749]]
+** Authorization Server
+#+BEGIN_QUOTE
+The server issuing access tokens to the client after successfully authenticating the resource owner and obtaining authorization.
+#+END_QUOTE
+Source: [[https://datatracker.ietf.org/doc/html/rfc6749#section-1.1][1.1 RFC6749]]
+** Authorization Grant
+#+BEGIN_QUOTE
+An authorization grant is a credential representing the resource owner's authorization (to access its protected resources) used by the client to obtain an access token.  This specification defines four grant types -- authorization code, implicit, resource owner password credentials, and client credentials -- as well as an extensibility mechanism for defining additional types.
+#+END_QUOTE
+Source: [[https://datatracker.ietf.org/doc/html/rfc6749#section-1.3][1.3 RFC6749]]
+* OAuth2 Overview
+#+BEGIN_EXAMPLE
++--------+                               +---------------+
+|        |--(A)- Authorization Request ->|   Resource    |
+|        |                               |     Owner     |
+|        |<-(B)-- Authorization Grant ---|               |
+|        |                               +---------------+
+|        |
+|        |                               +---------------+
+|        |--(C)-- Authorization Grant -->| Authorization |
+| Client |                               |     Server    |
+|        |<-(D)----- Access Token -------|               |
+|        |                               +---------------+
+|        |
+|        |                               +---------------+
+|        |--(E)----- Access Token ------>|    Resource   |
+|        |                               |     Server    |
+|        |<-(F)--- Protected Resource ---|               |
++--------+                               +---------------+
+#+END_EXAMPLE
+Source: [[https://datatracker.ietf.org/doc/html/rfc6749#section-1.2][1.2 RFC6749]]
+
+The abstract OAuth 2.0 flow illustrated in Figure 1 describes the interaction between the four roles and includes the following steps:
+
+A. The client requests authorization from the resource owner.  The authorization request can be made directly to the resource owner (as shown), or preferably indirectly via the authorization server as an intermediary.
+
+B. The client receives an authorization grant, which is a credential representing the resource owner's authorization, specification or using an extension grant type. The authorization grant type depends on the method used by the client to request authorization and the types supported by the authorization server.
+
+C. The client requests an access token by authenticating with the authorization server and presenting the authorization grant.
+
+D. The authorization server authenticates the client and validates the authorization grant, and if valid, issues an access token.
+
+E. The client requests the protected resource from the resource server and authenticates by presenting the access token.
+
+F. The resource server validates the access token, and if valid, serves the request.
+
+OWS implements the "implicit" and "authorization code" authorization grant types.
+
+* Authorization Code Grant Flow
+#+BEGIN_EXAMPLE
++----------+
+| Resource |
+|   Owner  |
+|          |
++----------+
+     ^
+     |
+    (B)
++----|-----+          Client Identifier      +---------------+
+|         -+----(A)-- & Redirection URI ---->|               |
+|  User-   |                                 | Authorization |
+|  Agent  -+----(B)-- User authenticates --->|     Server    |
+|          |                                 |               |
+|         -+----(C)-- Authorization Code ---<|               |
++-|----|---+                                 +---------------+
+  |    |                                         ^      v
+ (A)  (C)                                        |      |
+  |    |                                         |      |
+  ^    v                                         |      |
++---------+                                      |      |
+|         |>---(D)-- Authorization Code ---------'      |
+|  Client |          & Redirection URI                  |
+|         |                                             |
+|         |<---(E)----- Access Token -------------------'
++---------+       (w/ Optional Refresh Token)
+#+END_EXAMPLE
+Source: [[https://datatracker.ietf.org/doc/html/rfc6749#section-4.1][4.1 RFC6749]]
+
+A. The client initiates the flow by directing the resource owner's user-agent to the authorization endpoint.  The client includes its client identifier, requested scope, local state, and a redirection URI to which the authorization server will send the user-agent back once access is granted (or denied).
+
+B. The authorization server authenticates the resource owner (via the user-agent) and establishes whether the resource owner grants or denies the client's access request.
+
+C. Assuming the resource owner grants access, the authorization server redirects the user-agent back to the client using the redirection URI provided earlier (in the request or during client registration).  The redirection URI includes an authorization code and any local state provided by the client earlier.
+
+D. The client requests an access token from the authorization server's token endpoint by including the authorization code received in the previous step.  When making the request, the client authenticates with the authorization server. The client includes the redirection URI used to obtain the authorization code for verification.
+
+E. The authorization server authenticates the client, validates the authorization code, and ensures that the redirection URI received matches the URI used to redirect the client in step (C).  If valid, the authorization server responds back with an access token and, optionally, a refresh token.
+
+For a practical example/tutorial, see https://aaronparecki.com/oauth-2-simplified/#web-server-apps.
+
+* Implicit Grant Flow
+#+BEGIN_EXAMPLE
++----------+
+| Resource |
+|  Owner   |
+|          |
++----------+
+     ^
+     |
+    (B)
++----|-----+          Client Identifier     +---------------+
+|         -+----(A)-- & Redirection URI --->|               |
+|  User-   |                                | Authorization |
+|  Agent  -|----(B)-- User authenticates -->|     Server    |
+|          |                                |               |
+|          |<---(C)--- Redirection URI ----<|               |
+|          |          with Access Token     +---------------+
+|          |            in Fragment
+|          |                                +---------------+
+|          |----(D)--- Redirection URI ---->|   Web-Hosted  |
+|          |          without Fragment      |     Client    |
+|          |                                |    Resource   |
+|     (F)  |<---(E)------- Script ---------<|               |
+|          |                                +---------------+
++-|--------+
+  |    |
+ (A)  (G) Access Token
+  |    |
+  ^    v
++---------+
+|         |
+|  Client |
+|         |
++---------+
+#+END_EXAMPLE
+Source: [[https://datatracker.ietf.org/doc/html/rfc6749#section-4.2][4.2 RFC6749]]
+
+ A. The client initiates the flow by directing the resource owner's user-agent to the authorization endpoint.  The client includes its client identifier, requested scope, local state, and a redirection URI to which the authorization server will send the user-agent back once access is granted (or denied).
+
+ B. The authorization server authenticates the resource owner (via the user-agent) and establishes whether the resource owner grants or denies the client's access request.
+
+ C. Assuming the resource owner grants access, the authorization server redirects the user-agent back to the client using the redirection URI provided earlier.  The redirection URI includes the access token in the URI fragment.
+
+ D. The user-agent follows the redirection instructions by making a request to the web-hosted client resource (which does not include the fragment per [RFC2616]). The user-agent retains the fragment information locally.
+
+ E. The web-hosted client resource returns a web page (typically an HTML document with an embedded script) capable of accessing the full redirection URI including the fragment retained by the user-agent, and extracting the access token (and other parameters) contained in the fragment.
+
+ F. The user-agent executes the script provided by the web-hosted client resource locally, which extracts the access token.
+
+ G. The user-agent passes the access token to the client.
+
+As per [[https://datatracker.ietf.org/doc/html/rfc6749#section-10.3][RFC6749 10.3]]:
+#+BEGIN_QUOTE
+Access token credentials (as well as any confidential access token attributes) MUST be kept confidential in transit and storage, and only shared among the authorization server, the resource servers the access token is valid for, and the client to whom the access token is issued. Access token credentials MUST only be transmitted using TLS...
+#+END_QUOTE
+
+Likewise in [[https://datatracker.ietf.org/doc/html/rfc6749#section-10.5][RFC6749 10.5]]:
+#+BEGIN_QUOTE
+The transmission of authorization codes SHOULD be made over a secure channel, and the client SHOULD require the use of TLS with its redirection URI if the URI identifies a network resource.
+#+END_QUOTE
+
+*Redirection URL MUST SUPPORT TLS.*
+
+* Users & Clients
+** Client Types
+OAuth defines two client types, based on their ability to authenticate securely with the authorization server:
+ * Confidential: Clients capable of maintaining the confidentiality of their credentials (e.g., client implemented on a secure server with restricted access to the client credentials), or capable of secure client authentication using other means.
+ * Public: Clients incapable of maintaining the confidentiality of their credentials (e.g., clients executing on the device used by the resource owner, such as an installed native application or a web browser-based application), and incapable of secure client authentication via any other means.
+
+Source: [[https://datatracker.ietf.org/doc/html/rfc6749#section-2.1][RFC6749 2.1]]
+
+Confidential client types are reserved for organizational users (see design goals). These are other clubs or project entities that request OWS resources, but are capable of securely authenticating using a public/private API key pair (i.e. they need to login without interfacing the login page/client).
+
+Public clients access user information. They are probably implemented in a web browser, which is incapable of "maintaining the confidentiality of their credentials". This includes web pages, static pages, etc.
+
+** Client Identifier
+As per [[https://datatracker.ietf.org/doc/html/rfc6749#section-2.2][RFC6749 2.2]]:
+#+BEGIN_QUOTE
+The authorization server issues the registered client a client identifier -- a unique string representing the registration information provided by the client.
+#+END_QUOTE
+** User Identifier
+The user identifier will be used by applications to anonymously verify that a user is a UF student. Instead of retrieving the user's email address and personal information, applications can request the user-agent to ask the resource owner for their client identifier. The client identifier can differentiate users whilst also indicating their UF enrollment. See the scope (permissions) section.
+
+Note: the client is the application requesting access to the user's data. The user identifier is distinct from the client identifier.
+** User Registration
+The user registers with an email address and password. They can use any email address, but if it's not a @ufl.edu address then they won't be considered a UF student. Likewise, if they don't enter a UFL email address, then the next step in the sign-up page should be a prompt asking for their ufl.edu email, with a small text explaining how they wont be verified students (this is a skippable step, they just wont be verified).
+
+They'll then be asked for personal information: first/last name, etc.
+
+** Organization Registration
+TODO: Obtaining an API key pair for projects, clubs, organizations, etc.
+* Scope (permissions)
+Clients ask the resource owner for permission to access their sign-up data. If the resource owner complies, then the client can retrieve this information via API calls to the authentication server: First, the user enters the OAuth login page, which asks for their credentials and shows them a list of the permissions the client is asking for; if the user accepts, an access token is issued and passed to the client (via HTTP redirect); the client can now use this token to access the API routes that retrieve their requested permissions. If the user did not consent to a permission scope, then their access token will not be authorized to call the relevant API routes.
+
+** Default
+This is the default scope. Clients can use this to retrieve the user's user identifier and check whether the associated student has verified their UF student status. With this scope, users are anonymized but clients can still verify whether they're students.
+
+** Public
+Access to the user's public information: name, surname, etc. Public scope is a superset of default scope (meaning if you request public scope access, you can have access to the user identifier as well). Email address is excluded from this scope.
+
+** Primary Email Address (restricted)
+Request access to the user's primary email address. The primary email address is the email they used to sign up - not their UF email. I don't think there's a point in storing the user's UF email address (their UF affiliation is enough), if they chose to use a different address it's probably because they prefer not to receive messages on their UF address.
+
+* Authentication Frontend
+** OAuth Login flow
+1. User visits a site (client) that supports OWS login. This is typically indicated by a "Login with [SOME SERVICE]" button.
+2. User clicks the button. A small browser window pops up - this is the authentication frontend. When the user clicks the button, the client sends a request to the authorization endpoint (see API Reference) identifying themselves and asking for access to some scope of the user's data.
+3. User proceeds as normal. They create account, login, or if they're already logged in then they simply authorize the application to use their data.
+4. If successful, the frontend client sends an HTTP request to the redirection URI, passing the user's authorization via URL parameters. The redirection endpoint is a path on the client's server whose purpose is to receive authorization grants.
+5. Once the authorization grant code is received, the client sends a POST request asking for an access token. The access token may then be sent along with any API requests to our servers, proving the client's permission to access the user's data.
+
+** Implementation
+TODO
+
+* API Reference
+** Authorization Request
+Path: GET example.com/v0/oauth/authorize
+Parameters (must be passed in query string, see [[https://datatracker.ietf.org/doc/html/rfc6749#appendix-B][RFC6749 Appendix B]]
+response_type:
+ * "code" for authorization code grant flow.
+ * "token" for implicit grant flow.
+client_id:
+ * The client identifier.
+redirect_uri:
+ * As described in [[https://datatracker.ietf.org/doc/html/rfc6749#section-3.1.2][RFC6749]]
+scope:
+ * One of the values described in the Scope (permissions) section.
+state:
+ * "An opaque value used by the client to maintain state between the request and callback."
+ * Client generates this randomly, all the server has to do is respond with the same string.
+
+Example request:
+#+BEGIN_EXAMPLE
+GET /authorize?response_type=code&client_id=s6BhdRkqt3&state=xyz
+        &redirect_uri=https%3A%2F%2Fclient%2Eexample%2Ecom%2Fcb HTTP/1.1
+Host: server.example.com
+#+END_EXAMPLE
+
+This route points to the login page. Responses are sent by redirecting the user-agent back to the redirect_uri and passing in the relevant URL parameters as described below.
+
+*** Authorization Response
+As per [[https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2][RFC6749 4.1.2]]:
+#+BEGIN_EXAMPLE
+If the resource owner grants the access request, the authorization
+server issues an authorization code and delivers it to the client by
+adding the following parameters to the query component of the
+redirection URI using the "application/x-www-form-urlencoded" format
+#+END_EXAMPLE
+
+URL Parameters:
+
+code:
+ * The authorization code generated by the authorization server.
+ * The authorization code MUST expire shortly after it is issued to mitigate the risk of leaks.
+ * A maximum authorization code lifetime of 10 minutes is RECOMMENDED.
+ * The client MUST NOT use the authorization code more than once.  If an authorization code is used more than once, the authorization server MUST deny the request and SHOULD revoke (when possible) all tokens previously issued based on that authorization code.
+ * The authorization code is bound to the client identifier and redirection URI.
+
+state:
+ * REQUIRED if the "state" parameter was present in the client authorization request. The exact value received from the client.
+
+For example, the authorization server redirects the user-agent by sending the following HTTP response:
+#+BEGIN_EXAMPLE
+HTTP/1.1 302 Found
+Location: https://client.example.com/cb?code=SplxlOBeZQQYbYS6WxSbIA
+          &state=xyz
+#+END_EXAMPLE
+
+*** Access Token Response
+If using implicit grant flow, the access token will be returned. The authorization server issues an access token and delivers it to the client by adding the following parameters to the fragment component of the redirection URI using the "application/x-www-form-urlencoded" format
+
+access_token
+ * REQUIRED.  The access token issued by the authorization server.
+
+token_type
+ * The type of the token issued.
+
+expires_in
+ * RECOMMENDED.  The lifetime in seconds of the access token.  For example, the value "3600" denotes that the access token will expire in one hour from the time the response was generated. If omitted, the authorization server SHOULD provide the expiration time via other means or document the default value.
+
+scope
+ * if identical to the scope requested by the client; otherwise, REQUIRED.  The scope of the access token as described by Section 3.3.
+
+state
+ * REQUIRED if the "state" parameter was present in the client authorization request.  The exact value received from the client.
+
+The authorization server MUST NOT issue a refresh token.
+
+*** Authorization Flow Error Response
+See [[https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2.1][RFC 4.1.2.1]] for authorization code flow.
+See [[https://datatracker.ietf.org/doc/html/rfc6749#section-4.2.2.1][RFC6749 4.2.2.1]]
+
+Both are very simple.
+
+** Access Token Request
+Path: POST example.com/v0/oauth/token
+TODO: A client will need to be authenticated to reach this path.
+Request parameters:
+
+grant_type:
+ * Value MUST be set to "authorization_code" for authorization code grant flow.
+ * Value must be set to "refresh_token" for refreshing tokens.
+
+refresh_token:
+ * (OPTIONAL) only needed if the grant_type is refresh_token.
+ * This field value is the refresh token.
+
+code:
+ * The authorization code received from the authorization server.
+
+redirect_uri:
+ * REQUIRED, if the "redirect_uri" parameter was included in the authorization request as described in Section 4.1.1, and their values MUST be identical.
+
+Example:
+#+BEGIN_EXAMPLE
+POST /token HTTP/1.1
+Host: server.example.com
+Authorization: Basic czZCaGRSa3F0MzpnWDFmQmF0M2JW
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code&code=SplxlOBeZQQYbYS6WxSbIA
+&redirect_uri=https%3A%2F%2Fclient%2Eexample%2Ecom%2Fcb
+#+END_EXAMPLE
+
+The authorization server must:
+ * require client authentication for confidential clients or for any client that was issued client credentials (or with other authentication requirements),
+ * authenticate the client if client authentication is included,
+ * ensure that the authorization code was issued to the authenticated confidential client, or if the client is public, ensure that the code was issued to "client_id" in the request,
+ * verify that the authorization code is valid, and
+ * ensure that the "redirect_uri" parameter is present if the "redirect_uri" parameter was included in the initial authorization request as described in Section 4.1.1, and if included ensure that their values are identical.
+
+*** Access Token Response
+An example response:
+#+BEGIN_EXAMPLE
+HTTP/1.1 200 OK
+Content-Type: application/json;charset=UTF-8
+Cache-Control: no-store
+Pragma: no-cache
+ {
+  "access_token":"2YotnFZFEjr1zCsicMWpAA",
+  "token_type":"example",
+  "expires_in":3600,
+  "refresh_token":"tGzv3JOkF0XG5Qx2TlKWIA",
+  "example_parameter":"example_value"
+}
+#+END_EXAMPLE
