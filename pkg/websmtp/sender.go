@@ -1,32 +1,11 @@
-package main
+package websmtp
 
 import (
-	"fmt"
 	"github.com/emersion/go-smtp"
 	"github.com/google/uuid"
-	"io"
-	"net"
 	"net/mail"
-	"strings"
 	"sync"
-	"time"
 )
-
-// SendRequest is a request to send an email to the specified 'to' addresses.
-type SendRequest struct {
-	To      []string `json:"to" binding:"required"`
-	Subject string   `json:"subject" binding:"required"`
-	Body    string   `json:"body" binding:"required"`
-}
-
-// SendStatus tracks the status of a SendRequest. If status is "completed", then
-// Failed are the destination addresses that could not be reached.
-// TODO: keep error messages on failed addresses.
-type SendStatus struct {
-	ID     string   `json:"id" binding:"required"`
-	Status string   `json:"status" binding:"required"`
-	Failed []string `json:"failed" binding:"required"`
-}
 
 // sendObj wraps a SendRequest with a unique ID.
 type sendObj struct {
@@ -90,7 +69,7 @@ func (s *Sender) sendMail(entry sendObj) {
 			continue
 		}
 		if err := smtp.SendMail(host, nil, s.src, []string{dest},
-			s.getData(dest, entry)); err != nil {
+			getData(entry.ID, dest, s.src, entry.Req)); err != nil {
 			failed = append(failed, dest)
 		}
 	}
@@ -117,45 +96,4 @@ func (s *Sender) Run() {
 		s.mutex.Unlock()
 		s.sendMail(req)
 	}
-}
-
-// FindHost looks for an email address' SMTP host by looking up DNS records and
-// knocking on MX record entries. Returns empty string if not found.
-func FindHost(addr string) string {
-	if _, err := mail.ParseAddress(addr); err != nil {
-		return ""
-	}
-
-	domain := strings.Split(addr, "@")
-	if len(domain) != 2 {
-		return ""
-	}
-
-	// Retrieve MX DNS records.
-	mxrecords, err := net.LookupMX(domain[1])
-	if err != nil || len(mxrecords) == 0 {
-		return ""
-	}
-
-	// Knock on DNS mx records port 25.
-	for _, mx := range mxrecords {
-		host := mx.Host + ":25"
-
-		// TODO: bottleneck. Maybe implement caching?
-		conn, err := net.DialTimeout("tcp", host, 60*time.Millisecond)
-
-		if err == nil {
-			conn.Close()
-			return host
-		}
-	}
-
-	return ""
-}
-
-const dataFmt = "Message-Id: <%s@refid.com>\r\nTo: %s\r\nFrom: %s\r\nSubject: %s\r\n\r\n %s"
-
-func (s *Sender) getData(to string, obj sendObj) io.Reader {
-	return strings.NewReader(fmt.Sprintf(dataFmt, obj.ID, to, s.src,
-		obj.Req.Subject, obj.Req.Body))
 }
