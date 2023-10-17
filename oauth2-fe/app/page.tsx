@@ -1,95 +1,51 @@
-import Image from 'next/image'
-import styles from './page.module.css'
+"use client"
 
-export default function Home() {
+import { FormControl, FormLabel, Input, FormHelperText, FormErrorMessage, Button } from "@chakra-ui/react"
+import { useState, ChangeEvent } from "react"
+
+export default function OSCLogin() {
+  const [usernameInput, setUsernameInput] = useState('')
+  const [passwordInput, setPasswordInput] = useState('')
+
+  const handleUsernameInputChange = (e : ChangeEvent) => {
+    let value = (e.target as HTMLInputElement).value;
+    setUsernameInput(value);  
+  }
+
+  const handlePasswordInputChange = (e : ChangeEvent) => {
+    let value = (e.target as HTMLInputElement).value;
+    setPasswordInput(value);  
+  }
+
+  const isValidEmail = (email : string) => {
+    const regex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+    return regex.test(email);
+  };
+
+  const isError = !isValidEmail(usernameInput)
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore the Next.js 13 playground.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+    <FormControl isInvalid={isError} isRequired>
+      <FormLabel>Username</FormLabel>
+      <Input type='username' value={usernameInput} onChange={handleUsernameInputChange} />
+      {!isError ? (
+        <FormHelperText>
+          Enter the username.
+        </FormHelperText>
+      ) : (
+        <FormErrorMessage>Username is not a valid email.</FormErrorMessage>
+      )}
+      <FormLabel>Password</FormLabel>
+      <Input type='password' value={passwordInput} onChange={handlePasswordInputChange} />
+      <FormHelperText>
+        Enter the password.
+      </FormHelperText>
+      <Button
+        type='submit'
+      >
+        Submit
+      </Button>
+    </FormControl>
   )
+
 }
