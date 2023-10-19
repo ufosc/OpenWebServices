@@ -10,7 +10,7 @@ import (
 // sending email verification emails. Authentication should eventually be
 // implemented, but otherwise this is sufficient as a demo.
 func main() {
-	send := websmtp.NewSender("notifications@ufosc.org")
+	send := websmtp.NewSender()
 	r := gin.Default()
 
 	r.POST("/mail/send", func(c *gin.Context) {
@@ -32,6 +32,6 @@ func main() {
 		c.JSON(http.StatusOK, send.GetStatus(id))
 	})
 
-	go send.Run()
+	send.Start(1)
 	r.Run()
 }
