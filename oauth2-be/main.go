@@ -2,57 +2,30 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
-	"net/http"
 )
 
 func main() {
+	// Server.
+	config := GetConfig()
+	gin.SetMode(config.GIN_MODE)
 	r := gin.Default()
 
-	r.POST("/auth/signin", func(c *gin.Context) {
-		var req struct {
-			Username string `json:"username" binding:"required"`
-			Password string `json:"username" binding:"required"`
-		}
-		if err := c.BindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "invalid request",
-			})
-			return
-		}
+	// Mail sender.
+	ms := NewMailSender(config)
+	ms.Start(1)
+	defer ms.Stop()
 
-		if !validateUsername(req.Username) {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "username must be a ufl.edu email address",
-			})
-			return
-		}
-	})
+	// Database.
+	db, err := NewDatabase(config.MONGO_URI, config.DB_NAME)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Stop()
 
-	r.POST("/auth/signup", func(c *gin.Context) {
-
-	})
-
-	r.POST("/auth/client", func(c *gin.Context) {
-
-	})
-
-	// When a user signs up, an email is sent asking them to click on a
-	// button to verify their account. The button opens this route.
-	r.GET("/auth/verify/:ref", func(c *gin.Context) {
-
-	})
-
-	r.GET("/auth/grant", func(c *gin.Context) {
-
-	})
-
-	r.GET("/auth/token", func(c *gin.Context) {
-
-	})
+	// Routes.
+	r.POST("/auth/signup", SignupRoute(db, ms))
+	r.GET("/auth/authorize", AuthorizeRoute(db, config))
+	r.POST("/auth/signin", SigninRoute(db, ms))
 
 	r.Run()
-}
-
-func validateUsername() {
-
 }
