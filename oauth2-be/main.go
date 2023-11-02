@@ -1,10 +1,9 @@
 package main
 
-import (
-	"github.com/gin-gonic/gin"
-)
+import "github.com/gin-gonic/gin"
 
 func main() {
+
 	// Server.
 	config := GetConfig()
 	gin.SetMode(config.GIN_MODE)
@@ -25,7 +24,18 @@ func main() {
 	// Routes.
 	r.POST("/auth/signup", SignupRoute(db, ms))
 	r.GET("/auth/authorize", AuthorizeRoute(db, config))
-	r.POST("/auth/signin", SigninRoute(db, ms))
+	r.POST("/auth/signin", SigninRoute(db, config, ms))
+	r.GET("/auth/verify", VerifyEmailRoute(db))
+	r.GET("/auth/grant", AuthenticateUser(db, config), GrantRoute(db))
+	r.GET("/auth/token", AuthenticateClient(db), TokenRoute(db))
+
+	// User API.
+	r.GET("/user/:id", AuthenticateToken(db), func(c *gin.Context) {}) // Serve according to scope.
+	r.PUT("/user/:id", AuthenticateToken(db), func(c *gin.Context) {})
+
+	// Client API.
+	r.GET("/client/:id", func(c *gin.Context) {})
+	r.POST("/client", AuthenticateToken(db), func(c *gin.Context) {})
 
 	r.Run()
 }
