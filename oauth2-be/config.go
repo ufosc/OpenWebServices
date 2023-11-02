@@ -13,6 +13,7 @@ type Config struct {
 	DB_NAME          string
 	NOTIF_EMAIL_ADDR string
 	FE_PROXY_PORT    string
+	SECRET           string
 }
 
 // GetDefaultConfig populates a Config instance with default configuration
@@ -23,6 +24,7 @@ func GetDefaultConfig() (c Config) {
 	c.DB_NAME = "testing"
 	c.NOTIF_EMAIL_ADDR = "no-reply.notifications@ufosc.org"
 	c.FE_PROXY_PORT = ""
+	c.SECRET = "369369369369369369"
 	return c
 }
 
@@ -48,6 +50,9 @@ func GetConfig() Config {
 	}
 	if proxy := os.Getenv("FE_PROXY_PORT"); proxy != "" {
 		c.FE_PROXY_PORT = proxy
+	}
+	if secret := os.Getenv("SECRET"); secret != "" {
+		c.SECRET = secret
 	}
 
 	return c
