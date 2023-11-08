@@ -21,20 +21,21 @@ func main() {
 	}
 	defer db.Stop()
 
-	// Routes.
+	// Auth routes.
 	r.POST("/auth/signup", SignupRoute(db, ms))
 	r.GET("/auth/authorize", AuthorizeRoute(db, config))
 	r.POST("/auth/signin", SigninRoute(db, config, ms))
 	r.GET("/auth/verify", VerifyEmailRoute(db))
 	r.GET("/auth/grant", AuthenticateUser(db, config), GrantRoute(db))
 	r.GET("/auth/token", AuthenticateClient(db), TokenRoute(db))
+	r.DELETE("/auth/token/:id", AuthenticateClient(db), func(c *gin.Context) {})
 
 	// User API.
 	r.GET("/user/:id", AuthenticateToken(db), func(c *gin.Context) {}) // Serve according to scope.
 	r.PUT("/user/:id", AuthenticateToken(db), func(c *gin.Context) {})
 
 	// Client API.
-	r.GET("/client/:id", func(c *gin.Context) {})
+	r.GET("/client/:id", GetClientRoute(db))
 	r.POST("/client", AuthenticateToken(db), func(c *gin.Context) {})
 
 	r.Run()
