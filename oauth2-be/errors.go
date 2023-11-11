@@ -98,7 +98,7 @@ var (
 
 	ErrRefreshWrongClient = gin.H{
 		"code": "440",
-		"msg":  "refresh token client and authorization client don't match",
+		"msg":  "refresh token was not issued for the current client",
 	}
 
 	ErrInvalidRealm = gin.H{
@@ -158,26 +158,51 @@ var (
 
 	ErrNoCookie = gin.H{
 		"code": "452",
-		"msg": "could not extract auth cookie",
+		"msg":  "could not extract auth cookie",
 	}
 
 	ErrUserNotFound = gin.H{
 		"code": "453",
-		"msg": "could not find user",
+		"msg":  "could not find user",
 	}
 
 	ErrPasswordChanged = gin.H{
 		"code": "454",
-		"msg": "password changed",
+		"msg":  "password changed",
 	}
 
 	ErrVerificationRequired = gin.H{
 		"code": "455",
-		"msg": "email verification required. please log in again",
+		"msg":  "email verification required. please log in again",
 	}
 
 	ErrClientNotFound = gin.H{
 		"code": "456",
-		"msg": "client id not found",
+		"msg":  "client id not found",
+	}
+
+	ErrInvalidGrantType = gin.H{
+		"code": "457",
+		"msg":  "missing or invalid grant type",
+	}
+
+	ErrTokenExpired = gin.H{
+		"code": "458",
+		"msg":  "token has expired",
+	}
+
+	ErrTokenUnauthorized = gin.H{
+		"code": "459",
+		"msg":  "unauthorized or invalid auth header",
+	}
+
+	ErrWrongTokenType = gin.H{
+		"code": "460",
+		"msg":  "expected bearer header token type",
+	}
+
+	ErrInsufficientPermission = gin.H{
+		"code": "461",
+		"msg":  "this client does not have sufficient permission to access this route at this time",
 	}
 )

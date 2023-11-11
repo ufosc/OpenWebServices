@@ -21,7 +21,7 @@ func NewJWT(secret string, user UserModel) string {
 		"exp":   jwt.NewNumericDate(time.Now().Add(20 * time.Minute)).Unix(),
 	})
 
-	str, err := token.SignedString(secret)
+	str, err := token.SignedString([]byte(secret))
 	if err != nil {
 		return ""
 	}
@@ -40,10 +40,11 @@ func ValidateJWT(literal string, config Config) (Claims, bool) {
 		}
 
 		// Return the signing secret.
-		return config.SECRET, nil
+		return []byte(config.SECRET), nil
 	})
 
 	if err != nil {
+		fmt.Println(literal, err)
 		return Claims{}, false
 	}
 
