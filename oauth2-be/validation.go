@@ -3,11 +3,12 @@ package main
 import (
 	"golang.org/x/crypto/bcrypt"
 	"net/mail"
+	"regexp"
 	"strings"
 )
 
 const alpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-const special = "`~!@#$%^&*()_-=+[{]}\\|:;\"',<.>/"
+const special = "`~!@#$%^&*()_-=+[{]}\\|;\"',<.>/"
 const numeric = "0123456789"
 
 // ValidateEmail checks whether email is a valid email address ending
@@ -37,6 +38,9 @@ func ValidatePassword(password string) string {
 		return "password must be at least 12 characters"
 	}
 
+	// TODO: this is checking whether the password contains valid
+	// characters, not whether all characters are valid.
+
 	// Must be alphanumeric (both).
 	if !strings.ContainsAny(password, alpha) {
 		return "password must contain at least one letter"
@@ -62,6 +66,8 @@ func VerifyPassword(hash, password string) bool {
 	return true
 }
 
+// validateTokenScope validates a scope slice for a client that uses the 'token'
+// authentication response type.
 func validateTokenScope(scope []string) bool {
 	// Token-based clients only have access to 'public' scope.
 	if len(scope) > 1 {
@@ -75,6 +81,8 @@ func validateTokenScope(scope []string) bool {
 	return true
 }
 
+// validateCodeScope validates a scope slice for a client that uses the 'code'
+// authentication response type.
 func validateCodeScope(scope []string) bool {
 	if len(scope) > 2 {
 		return false
@@ -106,4 +114,11 @@ func ValidateScope(resType string, scope []string) bool {
 	}
 
 	return false
+}
+
+var redirectURIRegex = regexp.MustCompile(`^https:\/\/([a-z0-9]|\.|\-|\_)*(\/[a-z0-9A-Z:@?=&%.\-_$+]+)*$`)
+
+// ValidateRedirectURI validates a client redirect URI.
+func ValidateRedirectURI(uri string) bool {
+	return !redirectURIRegex.MatchString(uri)
 }
