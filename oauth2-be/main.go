@@ -4,7 +4,7 @@ import "github.com/gin-gonic/gin"
 
 func main() {
 
-	// Server.
+	// Web server.
 	config := GetConfig()
 	gin.SetMode(config.GIN_MODE)
 	r := gin.Default()
@@ -28,15 +28,16 @@ func main() {
 	r.GET("/auth/verify", VerifyEmailRoute(db))
 	r.GET("/auth/grant", AuthenticateUser(db, config), GrantRoute(db))
 	r.GET("/auth/token", AuthenticateClient(db), TokenRoute(db))
-	r.DELETE("/auth/token/:id", AuthenticateClient(db), func(c *gin.Context) {})
+	r.DELETE("/auth/token/:id", AuthenticateClient(db), DeleteTokenRoute(db))
 
 	// User API.
 	r.GET("/user/:id", AuthenticateToken(db), func(c *gin.Context) {}) // Serve according to scope.
-	r.PUT("/user/:id", AuthenticateToken(db), func(c *gin.Context) {})
+	r.PUT("/user/:id", AuthenticateToken(db, "user.modify"), func(c *gin.Context) {})
 
-	// Client API.
+	// Client API: Clients do not get modified/updated. A new one must be
+	// created.
 	r.GET("/client/:id", GetClientRoute(db))
-	r.POST("/client", AuthenticateToken(db), func(c *gin.Context) {})
+	r.POST("/client", AuthenticateToken(db, "client.create"), CreateClientRoute(db))
 
 	r.Run()
 }
