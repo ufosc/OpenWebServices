@@ -263,3 +263,198 @@ func (db *Database) ReadClient(id string) (ClientModel, error) {
 
 	return client, nil
 }
+
+func (db *Database) ReadClientByName(name string) (ClientModel, error) {
+	if db.stopped {
+		return ClientModel{}, fmt.Errorf("db has stopped")
+	}
+
+	var client ClientModel
+	coll := db.client.Database(db.dbname).Collection("clients")
+	err := coll.FindOne(context.TODO(), bson.D{{"name", name}}).Decode(&client)
+	if err != nil {
+		return ClientModel{}, err
+	}
+
+	return client, nil
+}
+
+func (db *Database) CreateClient(client ClientModel) (string, error) {
+	if db.stopped {
+		return "", fmt.Errorf("db has stopped")
+	}
+
+	coll := db.client.Database(db.dbname).Collection("clients")
+	res, err := coll.InsertOne(context.TODO(), client)
+	if err != nil {
+		return "", err
+	}
+
+	return res.InsertedID.(primitive.ObjectID).Hex(), nil
+}
+
+func (db *Database) DeleteClient(id string) error {
+	if db.stopped {
+		return fmt.Errorf("db has been stopped")
+	}
+
+	objectId, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+
+	coll := db.client.Database(db.dbname).Collection("clients")
+	_, err = coll.DeleteOne(context.TODO(), bson.D{{"_id", objectId}})
+
+	return err
+}
+
+func (db *Database) ReadRefreshToken(id string) (Token, error) {
+	if db.stopped {
+		return Token{}, fmt.Errorf("db has been stopped")
+	}
+
+	objectId, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return Token{}, err
+	}
+
+	var token Token
+	coll := db.client.Database(db.dbname).Collection("refresh_tokens")
+	err = coll.FindOne(context.TODO(), bson.D{{"_id", objectId}}).Decode(&token)
+	if err != nil {
+		return Token{}, err
+	}
+
+	return token, nil
+}
+
+func (db *Database) DeleteRefreshToken(id string) error {
+	if db.stopped {
+		return fmt.Errorf("db has been stopped")
+	}
+
+	objectId, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+
+	coll := db.client.Database(db.dbname).Collection("refresh_tokens")
+	_, err = coll.DeleteOne(context.TODO(), bson.D{{"_id", objectId}})
+
+	return err
+}
+
+func (db *Database) CreateRefreshToken(tk Token) (string, error) {
+	if db.stopped {
+		return "", fmt.Errorf("db has stopped")
+	}
+
+	coll := db.client.Database(db.dbname).Collection("refresh_tokens")
+	res, err := coll.InsertOne(context.TODO(), tk)
+	if err != nil {
+		return "", err
+	}
+
+	return res.InsertedID.(primitive.ObjectID).Hex(), nil
+}
+
+func (db *Database) ReadAccessToken(id string) (Token, error) {
+	if db.stopped {
+		return Token{}, fmt.Errorf("db has been stopped")
+	}
+
+	objectId, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return Token{}, nil
+	}
+
+	var token Token
+	coll := db.client.Database(db.dbname).Collection("access_tokens")
+	err = coll.FindOne(context.TODO(), bson.D{{"_id", objectId}}).Decode(&token)
+	if err != nil {
+		return Token{}, err
+	}
+
+	return token, nil
+}
+
+func (db *Database) DeleteAccessToken(id string) error {
+	if db.stopped {
+		return fmt.Errorf("db has been stopped")
+	}
+
+	objectId, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+
+	coll := db.client.Database(db.dbname).Collection("access_tokens")
+	_, err = coll.DeleteOne(context.TODO(), bson.D{{"_id", objectId}})
+
+	return err
+}
+
+func (db *Database) CreateAccessToken(tk Token) (string, error) {
+	if db.stopped {
+		return "", fmt.Errorf("db has stopped")
+	}
+
+	coll := db.client.Database(db.dbname).Collection("access_tokens")
+	res, err := coll.InsertOne(context.TODO(), tk)
+	if err != nil {
+		return "", err
+	}
+
+	return res.InsertedID.(primitive.ObjectID).Hex(), nil
+}
+
+func (db *Database) ReadAuthCode(id string) (Token, error) {
+	if db.stopped {
+		return Token{}, fmt.Errorf("db has been stopped")
+	}
+
+	objectId, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return Token{}, nil
+	}
+
+	var token Token
+	coll := db.client.Database(db.dbname).Collection("auth_tokens")
+	err = coll.FindOne(context.TODO(), bson.D{{"_id", objectId}}).Decode(&token)
+	if err != nil {
+		return Token{}, err
+	}
+
+	return token, nil
+}
+
+func (db *Database) CreateAuthCode(tk Token) (string, error) {
+	if db.stopped {
+		return "", fmt.Errorf("db has stopped")
+	}
+
+	coll := db.client.Database(db.dbname).Collection("auth_tokens")
+	res, err := coll.InsertOne(context.TODO(), tk)
+	if err != nil {
+		return "", err
+	}
+
+	return res.InsertedID.(primitive.ObjectID).Hex(), nil
+}
+
+func (db *Database) DeleteAuthCode(id string) error {
+	if db.stopped {
+		return fmt.Errorf("db has been stopped")
+	}
+
+	objectId, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+
+	coll := db.client.Database(db.dbname).Collection("auth_tokens")
+	_, err = coll.DeleteOne(context.TODO(), bson.D{{"_id", objectId}})
+
+	return err
+}

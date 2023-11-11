@@ -1,15 +1,20 @@
 package main
 
 import (
+	b64 "encoding/base64"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"reflect"
 	"sort"
+	"strings"
 	"time"
 )
 
+// AuthenticateUser returns a Gin middleware that handles authentication of a
+// user. It checks whether the user JWT cookie is present, validates it, and
+// handles any request errors.
 func AuthenticateUser(db *Database, config Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
@@ -67,17 +72,176 @@ func AuthenticateUser(db *Database, config Config) gin.HandlerFunc {
 		}
 
 		c.Set("user", userExists)
+		c.Next()
 	}
 }
 
 func AuthenticateClient(db *Database) gin.HandlerFunc {
-	// TODO: verify client.Owner still exists.
 	return func(c *gin.Context) {
+		tkStr := strings.Split(c.GetHeader("Authorization"), " ")
+		if len(tkStr) != 2 {
+			c.Header("WWW-Authenticate", "Basic realm=\"client\"")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"status": "error",
+				"error":  ErrTokenUnauthorized,
+			})
+			return
+		}
+
+		if tkStr[0] != "Basic" {
+			c.Header("WWW-Authenticate", "Basic realm=\"client\"")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"status": "error",
+				"error":  ErrTokenUnauthorized,
+			})
+			return
+		}
+
+		// Extract client_id and secret key.
+		decode, err := b64.StdEncoding.DecodeString(tkStr[1])
+		if err != nil {
+			c.Header("WWW-Authenticate", "Basic realm=\"client\"")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"status": "error",
+				"error":  ErrTokenUnauthorized,
+			})
+			return
+		}
+
+		userPass := strings.Split(string(decode), ":")
+		if len(userPass) != 2 {
+			c.Header("WWW-Authenticate", "Basic realm=\"client\"")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"status": "error",
+				"error":  ErrTokenUnauthorized,
+			})
+			return
+		}
+
+		// Verify.
+		clientExists, err := db.ReadClient(userPass[0])
+		if err != nil {
+			c.Header("WWW-Authenticate", "Basic realm=\"client\"")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"status": "error",
+				"error":  ErrTokenUnauthorized,
+			})
+			return
+		}
+
+		if !VerifyPassword(clientExists.Key, userPass[1]) {
+			c.Header("WWW-Authenticate", "Basic realm=\"client\"")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"status": "error",
+				"error":  ErrTokenUnauthorized,
+			})
+			return
+		}
+
+		// Check if client owner still exists.
+		if _, err := db.ReadUser(clientExists.Owner); err != nil {
+			db.DeleteClient(clientExists.ID)
+			c.Header("WWW-Authenticate", "Basic realm=\"client\"")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"status": "error",
+				"error":  ErrTokenUnauthorized,
+			})
+			return
+		}
+
+		// Set client context.
+		c.Set("client", clientExists)
 	}
 }
 
-func AuthenticateToken(db *Database) gin.HandlerFunc {
+// TODO: 'realm' in header response should reflect the values in 'scope'
+func AuthenticateToken(db *Database, scope ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		tkStr := strings.Split(c.GetHeader("Authorization"), " ")
+		if len(tkStr) < 2 {
+			c.Header("WWW-Authenticate", "Bearer realm=\"access_token\"")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"status": "error",
+				"error":  ErrTokenUnauthorized,
+			})
+			return
+		}
+
+		if tkStr[0] != "Bearer" {
+			c.Header("WWW-Authenticate", "Bearer realm=\"access_token\"")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"status": "error",
+				"error":  ErrWrongTokenType,
+			})
+			return
+		}
+
+		// Verify key exists.
+		tkExists, err := db.ReadAccessToken(tkStr[1])
+		if err != nil {
+			c.Header("WWW-Authenticate", "Bearer realm=\"access_token\"")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"status": "error",
+				"error":  ErrTokenUnauthorized,
+			})
+			return
+		}
+
+		// Ensure key is not expired.
+		if (tkExists.Created + tkExists.TTL) > time.Now().Unix() {
+			c.Header("WWW-Authenticate", "Bearer realm=\"access_token\"")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"status": "error",
+				"error":  ErrTokenExpired,
+			})
+			return
+		}
+
+		// Verify associated user exists.
+		userExists, err := db.ReadUser(tkExists.UserID)
+		if err != nil {
+			c.Header("WWW-Authenticate", "Bearer realm=\"access_token\"")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"status": "error",
+				"error":  ErrUserNotFound,
+			})
+			return
+		}
+
+		// Verify associated client exists.
+		clientExists, err := db.ReadClient(tkExists.ClientID)
+		if err != nil {
+			c.Header("WWW-Authenticate", "Bearer realm=\"access_token\"")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"status": "error",
+				"error":  ErrClientNotFound,
+			})
+			return
+		}
+
+		// Verify token is authorized for this route.
+		expectedScope := map[string]bool{}
+		for _, value := range scope {
+			expectedScope[value] = true
+		}
+
+		for _, value := range clientExists.Scope {
+			if expectedScope[value] {
+				continue
+			}
+			c.Header("WWW-Authenticate", "Bearer realm=\"access_token\"")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"status": "error",
+				"error":  ErrInsufficientPermission,
+			})
+			return
+		}
+
+		// Write client, user, token to context.
+		c.Set("user", userExists)
+		c.Set("client", clientExists)
+		c.Set("token", tkExists)
+		c.Next()
 	}
 }
 
@@ -103,7 +267,6 @@ func SignupRoute(db *Database, ms MailSender) gin.HandlerFunc {
 		}
 
 		// Validate Email.
-		/*
 		if !ValidateEmail(req.Email) {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"status": "error",
@@ -111,7 +274,6 @@ func SignupRoute(db *Database, ms MailSender) gin.HandlerFunc {
 			})
 			return
 		}
-		*/
 
 		// Ensure password is sufficiently strong.
 		if err := ValidatePassword(req.Password); err != "" {
@@ -167,7 +329,7 @@ func SignupRoute(db *Database, ms MailSender) gin.HandlerFunc {
 			Email: req.Email,
 			User: UserModel{
 				"", req.Email, string(hash), req.FirstName,
-				req.LastName, 0, 0,
+				req.LastName, []string{}, 0, 0,
 			},
 			TTL: 1200,
 		}
@@ -518,8 +680,7 @@ func GrantRoute(db *Database) gin.HandlerFunc {
 
 		// Create implicit token.
 		if client.ResponseType == "token" {
-			token := AccessTokenModel{
-				Type:     req.ResponseType,
+			token := Token{
 				ClientID: client.ID,
 				UserID:   user.ID,
 				Created:  time.Now().Unix(),
@@ -544,11 +705,11 @@ func GrantRoute(db *Database) gin.HandlerFunc {
 		}
 
 		// Create authorization code.
-		code := AuthCodeModel{
+		code := Token{
 			ClientID: client.ID,
-			UserID: user.ID,
-			Created: time.Now().Unix(),
-			TTL: 600,
+			UserID:   user.ID,
+			Created:  time.Now().Unix(),
+			TTL:      600,
 		}
 
 		// Save to DB.
@@ -569,6 +730,244 @@ func GrantRoute(db *Database) gin.HandlerFunc {
 }
 
 func TokenRoute(db *Database) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get underlying client (passed in via AuthenticateClient route).
+		clientAny, ok := c.Get("client")
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status": "error",
+				"error":  ErrClientNotFound,
+			})
+			return
+		}
+
+		// Cast to client model.
+		client, ok := clientAny.(ClientModel)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status": "error",
+				"error":  ErrClientNotFound,
+			})
+			return
+		}
+
+		// Gather query parameters.
+		grantType := c.DefaultQuery("grant_type", "")
+		code := c.DefaultQuery("code", "")
+		redirectUri := c.DefaultQuery("redirect_uri", "")
+		clientID := c.DefaultQuery("client_id", "")
+		refreshToken := c.DefaultQuery("refresh_token", "")
+
+		// Validate grant type.
+		if grantType != "refresh_token" && grantType != "authorization_code" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status": "error",
+				"error":  ErrInvalidGrantType,
+			})
+			return
+		}
+
+		if grantType == "refresh_token" {
+			// Validate refresh token parameter.
+			if refreshToken == "" {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"status": "error",
+					"error":  ErrInvalidRefreshToken,
+				})
+				return
+			}
+
+			// Verify refresh token exists.
+			token, err := db.ReadRefreshToken(refreshToken)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"status": "error",
+					"error":  ErrInvalidRefreshToken,
+				})
+				return
+			}
+
+			// Ensure token is not expired.
+			if (token.Created + token.TTL) > time.Now().Unix() {
+				db.DeleteRefreshToken(token.ID)
+				c.JSON(http.StatusBadRequest, gin.H{
+					"status": "error",
+					"error":  ErrTokenExpired,
+				})
+				return
+			}
+
+			// Ensure that the refresh token was issued to the
+			// authenticated client.
+			if token.ClientID != client.ID {
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"status": "error",
+					"error":  ErrRefreshWrongClient,
+				})
+				return
+			}
+
+			// Ensure associated user still exists.
+			if _, err := db.ReadUser(token.UserID); err != nil {
+				db.DeleteRefreshToken(token.ID)
+				c.JSON(http.StatusBadRequest, gin.H{
+					"status": "error",
+					"error":  ErrUserNotFound,
+				})
+				return
+			}
+
+			// Create new access token.
+			atoken := Token{
+				ClientID: client.ID,
+				UserID:   token.UserID,
+				Created:  time.Now().Unix(),
+				TTL:      1200,
+			}
+
+			// Save new access token to db.
+			atokenID, err := db.CreateAccessToken(atoken)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"status": "error",
+					"error":  ErrDbFailure,
+				})
+				return
+			}
+
+			// Return token.
+			c.JSON(http.StatusOK, gin.H{
+				"status":        "success",
+				"token":         atokenID,
+				"token_type":    "bearer",
+				"expires_in":    1200,
+				"refresh_token": token.ID,
+			})
+
+			return
+		}
+
+		// Grant type : authorization_code.
+
+		// Ensure required params are non-nil.
+		if code == "" || redirectUri == "" || clientID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status": "error",
+				"error":  ErrMalformedURLParams,
+			})
+			return
+		}
+
+		// Validate code.
+		codeExists, err := db.ReadAuthCode(code)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"status": "error",
+				"error":  ErrTokenExpired,
+			})
+			return
+		}
+
+		// Ensure code has not expired.
+		if (codeExists.Created + codeExists.TTL) > time.Now().Unix() {
+			db.DeleteAuthCode(codeExists.ID)
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"status": "error",
+				"error":  ErrTokenExpired,
+			})
+			return
+		}
+
+		// Ensure client IDs match.
+		if clientID != codeExists.ClientID {
+			db.DeleteAuthCode(codeExists.ID)
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status": "error",
+				"error":  ErrGrantWrongClient,
+			})
+			return
+		}
+
+		// Ensure client id exists.
+		clientExists, err := db.ReadClient(clientID)
+		if err != nil {
+			db.DeleteAuthCode(codeExists.ID)
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status": "error",
+				"error":  ErrClientNotFound,
+			})
+			return
+		}
+
+		// Ensure redirectURI is the same as client.
+		if clientExists.RedirectURI != redirectUri {
+			db.DeleteAuthCode(codeExists.ID)
+			c.JSON(http.StatusBadRequest, gin.H{
+				"status": "error",
+				"error":  ErrDifferentRedirectURI,
+			})
+			return
+		}
+
+		// Ensure userID still exists.
+		if _, err := db.ReadUser(codeExists.UserID); err != nil {
+			db.DeleteAuthCode(codeExists.ID)
+			c.JSON(http.StatusNotFound, gin.H{
+				"status": "error",
+				"error":  ErrUserNotFound,
+			})
+			return
+		}
+
+		// Create access token.
+		atoken := Token{
+			ClientID: client.ID,
+			UserID:   codeExists.UserID,
+			Created:  time.Now().Unix(),
+			TTL:      1200,
+		}
+
+		aid, err := db.CreateAccessToken(atoken)
+		if err != nil {
+			db.DeleteAuthCode(codeExists.ID)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status": "error",
+				"error":  ErrDbFailure,
+			})
+			return
+		}
+
+		// Create refresh token.
+		rtoken := Token{
+			ClientID: client.ID,
+			UserID:   codeExists.UserID,
+			Created:  time.Now().Unix(),
+			TTL:      5256000,
+		}
+
+		rid, err := db.CreateRefreshToken(rtoken)
+		if err != nil {
+			db.DeleteAccessToken(aid)
+			db.DeleteAuthCode(codeExists.ID)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status": "error",
+				"error":  ErrDbFailure,
+			})
+			return
+		}
+
+		// Return token.
+		c.JSON(http.StatusOK, gin.H{
+			"status":        "success",
+			"access_token":  aid,
+			"token_type":    "bearer",
+			"expires_in":    1200,
+			"refresh_token": rid,
+		})
+	}
+}
+
+func DeleteTokenRoute(db *Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
 	}
 }
