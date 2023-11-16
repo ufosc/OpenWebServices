@@ -1,0 +1,9 @@
+@use '@carbon/react';
+
+.button--arrow {
+    position: absolute;
+    right: 1rem;
+    width: 1rem;
+    height: 1rem;
+    flexShrink: 0;
+}
