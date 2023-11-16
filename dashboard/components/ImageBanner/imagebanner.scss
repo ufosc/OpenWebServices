@@ -1,0 +1,29 @@
+.decoration {
+    height: calc(100vh - 48px - 32px - 32px);
+    display: grid;
+}
+
+#decoration--image {
+    min-height: 100%;
+    min-width: 100%;
+    width: 100%;
+    object-fit: cover;
+}
+
+#decoration--meta {
+    text-align: left;
+    padding: 3px;
+    padding-left: 7px;
+    position: relative;
+    background: black;
+    height: 30px;
+    bottom: 30px;
+    color: white;
+    z-index: 100;
+}
+
+@media only screen and (max-width: 600px) {
+    .decoration {
+	display: none;
+    }
+}
