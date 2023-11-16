@@ -2,7 +2,9 @@ import {
   Notification,
   UserAvatar,
   Asleep,
-  Awake
+  Awake,
+  LogoInstagram,
+  LogoFacebook
 } from '@carbon/icons-react'
 
 import {
@@ -31,12 +33,12 @@ const NavHeader = ({ setTheme }) => {
     return (theme == "white") ? (
       <HeaderGlobalAction aria-label="Theme Selector"
 	onClick={() => setTheme("g100")}>
-	    <Asleep size={20} />
+	    <Awake size={20} />
       </HeaderGlobalAction>
     ) : (
       <HeaderGlobalAction aria-label="Theme Selector"
         onClick={()=> setTheme("white")} >
-	  <Awake size={20} />
+	  <Asleep size={20} />
       </HeaderGlobalAction>
     )
   }
@@ -50,7 +52,7 @@ const NavHeader = ({ setTheme }) => {
 	  onClick={onClickSideNavExpand}
 	  isActive={isSideNavExpanded}
 	/>
-        <HeaderName href="/" prefix="UF OSC">OpenWebServices</HeaderName>
+        <HeaderName href="/" prefix="UF">OpenWebServices</HeaderName>
 	<HeaderNavigation aria-label="OpenWebServices">
           <HeaderMenuItem href="/">Dashboard</HeaderMenuItem>
 	  <HeaderMenuItem href="https://github.com/ufosc">Github</HeaderMenuItem>
@@ -69,6 +71,12 @@ const NavHeader = ({ setTheme }) => {
         </SideNav>
 	<HeaderGlobalBar>
 	  { themeSelector() }
+	  <HeaderGlobalAction aria-label="Instagram" tooltipAlignment="center" href="https://www.instagram.com/uf_osc/">
+	    <LogoInstagram size={20} />
+	  </HeaderGlobalAction>
+	  <HeaderGlobalAction aria-label="Facebook" tooltipAlignment="center" href="https://www.facebook.com/groups/ufosc/">
+	    <LogoFacebook size={20} />
+	  </HeaderGlobalAction>
 	  <HeaderGlobalAction aria-label="Account" tooltipAlignment="center">
 	    <UserAvatar size={20} />
 	  </HeaderGlobalAction>

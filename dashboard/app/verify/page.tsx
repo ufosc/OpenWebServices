@@ -14,7 +14,7 @@ const VerifyEmailPage = () => {
 	  Make sure to check your spam folder.
 	  You may safely exit this page.
 	</p>
-	<Link href="/signin">Return to Sign in Page</Link>
+	<Link href="/signin">Return to Sign in</Link>
       </div>
       <ImageBanner />
     </div>
