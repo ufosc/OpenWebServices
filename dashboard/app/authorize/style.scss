@@ -1,3 +1,13 @@
+.form { width: 100%; }
+
+.signinform--button {
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 15px;
+}
+
+hr { border-top: 0.5px solid gray; }
+
 .loginPage {
     display: grid;
     grid-template-columns: 1fr 3fr;
@@ -13,7 +23,7 @@
 
 @media only screen and (min-width: 1200px) {
     .loginPage {
-	grid-template-columns: 1fr 5fr;
+	grid-template-columns: 1fr 4fr;
     }
 }
 
