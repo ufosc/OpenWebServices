@@ -2,7 +2,7 @@
 
 const ResetPasswordPage = () => {
   return (
-    <p> Reset Password </p>
+    <p> Reset Password: Currently unavailable (work in progress) </p>
   )
 }
 
