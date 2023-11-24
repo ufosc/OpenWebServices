@@ -11,10 +11,13 @@
   "dependencies": {
     "@carbon/icons-react": "^11.30.0",
     "@carbon/react": "^1.42.0",
+    "axios": "^1.6.2",
+    "dotenv": "^16.3.1",
     "next": "14.0.2",
     "react": "^18",
     "react-dom": "^18",
-    "sass": "^1.69.5"
+    "sass": "^1.69.5",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@types/node": "^20",
