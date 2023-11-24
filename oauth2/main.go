@@ -1,6 +1,10 @@
 package main
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	"time"
+)
 
 func main() {
 
@@ -8,6 +12,16 @@ func main() {
 	config := GetConfig()
 	gin.SetMode(config.GIN_MODE)
 	r := gin.Default()
+
+	// Set up CORS.
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"POST"},
+		AllowHeaders:     []string{"*"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	// Mail sender.
 	ms := NewMailSender(config)
@@ -23,8 +37,8 @@ func main() {
 
 	// Auth routes.
 	r.POST("/auth/signup", SignupRoute(db, ms))
-	r.GET("/auth/authorize", AuthorizeRoute(db, config))
 	r.POST("/auth/signin", SigninRoute(db, config, ms))
+	r.POST("/auth/signout", SignoutRoute())
 	r.GET("/auth/verify", VerifyEmailRoute(db))
 	r.GET("/auth/grant", AuthenticateUser(db, config), GrantRoute(db))
 	r.GET("/auth/token", AuthenticateClient(db), TokenRoute(db))

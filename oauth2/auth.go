@@ -6,8 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
-	"reflect"
-	"sort"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -22,8 +21,7 @@ func AuthenticateUser(db *Database, config Config) gin.HandlerFunc {
 		cookie, err := c.Cookie("ows-jwt")
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrNoCookie,
+				"error": "User-agent is missing OWS-JWT cookie. Please sign-in again.",
 			})
 			return
 		}
@@ -31,10 +29,9 @@ func AuthenticateUser(db *Database, config Config) gin.HandlerFunc {
 		// Extract JWT claims. Will fail if expired.
 		claims, ok := ValidateJWT(cookie, config)
 		if !ok {
-			c.SetCookie("ows-jwt", "", 0, "/", "localhost", false, true)
+			c.SetCookie("ows-jwt", "", 0, "/", "localhost", true, false)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrNoCookie,
+				"error": "User-agent is missing OWS-JWT cookie. Please sign-in again.",
 			})
 			return
 		}
@@ -44,8 +41,7 @@ func AuthenticateUser(db *Database, config Config) gin.HandlerFunc {
 		if err != nil {
 			c.SetCookie("ows-jwt", "", 0, "/", "localhost", false, true)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrUserNotFound,
+				"error": "User has been deleted or could not be found",
 			})
 			return
 		}
@@ -54,8 +50,7 @@ func AuthenticateUser(db *Database, config Config) gin.HandlerFunc {
 		if userExists.Password != claims.PHash {
 			c.SetCookie("ows-jwt", "", 0, "/", "localhost", false, true)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrPasswordChanged,
+				"error": "User password changed. Please sign-in again",
 			})
 			return
 		}
@@ -65,8 +60,7 @@ func AuthenticateUser(db *Database, config Config) gin.HandlerFunc {
 		if time.Since(lastVerified).Hours() > 2160 {
 			c.SetCookie("ows-jwt", "", 0, "/", "localhost", false, true)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrVerificationRequired,
+				"error": "User requires email verification. Please sign-in again",
 			})
 			return
 		}
@@ -82,8 +76,7 @@ func AuthenticateClient(db *Database) gin.HandlerFunc {
 		if len(tkStr) != 2 {
 			c.Header("WWW-Authenticate", "Basic realm=\"client\"")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrTokenUnauthorized,
+				"error": "Invalid Authorization header",
 			})
 			return
 		}
@@ -91,8 +84,7 @@ func AuthenticateClient(db *Database) gin.HandlerFunc {
 		if tkStr[0] != "Basic" {
 			c.Header("WWW-Authenticate", "Basic realm=\"client\"")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrTokenUnauthorized,
+				"error": "Authorization must use 'basic' scheme",
 			})
 			return
 		}
@@ -102,8 +94,7 @@ func AuthenticateClient(db *Database) gin.HandlerFunc {
 		if err != nil {
 			c.Header("WWW-Authenticate", "Basic realm=\"client\"")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrTokenUnauthorized,
+				"error": "Invalid Authorization header encoding",
 			})
 			return
 		}
@@ -112,8 +103,7 @@ func AuthenticateClient(db *Database) gin.HandlerFunc {
 		if len(userPass) != 2 {
 			c.Header("WWW-Authenticate", "Basic realm=\"client\"")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrTokenUnauthorized,
+				"error": "Invalid Authorization header encoding",
 			})
 			return
 		}
@@ -123,8 +113,7 @@ func AuthenticateClient(db *Database) gin.HandlerFunc {
 		if err != nil {
 			c.Header("WWW-Authenticate", "Basic realm=\"client\"")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrTokenUnauthorized,
+				"error": "Client not found",
 			})
 			return
 		}
@@ -132,8 +121,7 @@ func AuthenticateClient(db *Database) gin.HandlerFunc {
 		if !VerifyPassword(clientExists.Key, userPass[1]) {
 			c.Header("WWW-Authenticate", "Basic realm=\"client\"")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrTokenUnauthorized,
+				"error": "Invalid secret key",
 			})
 			return
 		}
@@ -143,8 +131,7 @@ func AuthenticateClient(db *Database) gin.HandlerFunc {
 			db.DeleteClient(clientExists.ID)
 			c.Header("WWW-Authenticate", "Basic realm=\"client\"")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrTokenUnauthorized,
+				"error": "The user associated with this client no longer exists",
 			})
 			return
 		}
@@ -161,8 +148,7 @@ func AuthenticateToken(db *Database, scope ...string) gin.HandlerFunc {
 		if len(tkStr) < 2 {
 			c.Header("WWW-Authenticate", "Bearer realm=\"access_token\"")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrTokenUnauthorized,
+				"error": "Invalid authorization header",
 			})
 			return
 		}
@@ -170,8 +156,7 @@ func AuthenticateToken(db *Database, scope ...string) gin.HandlerFunc {
 		if tkStr[0] != "Bearer" {
 			c.Header("WWW-Authenticate", "Bearer realm=\"access_token\"")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrWrongTokenType,
+				"error": "Authorization scheme must be 'basic'",
 			})
 			return
 		}
@@ -181,8 +166,7 @@ func AuthenticateToken(db *Database, scope ...string) gin.HandlerFunc {
 		if err != nil {
 			c.Header("WWW-Authenticate", "Bearer realm=\"access_token\"")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrTokenUnauthorized,
+				"error": "Access token expired or could not be found",
 			})
 			return
 		}
@@ -191,8 +175,7 @@ func AuthenticateToken(db *Database, scope ...string) gin.HandlerFunc {
 		if (tkExists.Created + tkExists.TTL) > time.Now().Unix() {
 			c.Header("WWW-Authenticate", "Bearer realm=\"access_token\"")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrTokenExpired,
+				"error": "Access token expired or could not be found",
 			})
 			return
 		}
@@ -202,8 +185,7 @@ func AuthenticateToken(db *Database, scope ...string) gin.HandlerFunc {
 		if err != nil {
 			c.Header("WWW-Authenticate", "Bearer realm=\"access_token\"")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrUserNotFound,
+				"error": "The user associated with this token could not be found",
 			})
 			return
 		}
@@ -213,8 +195,7 @@ func AuthenticateToken(db *Database, scope ...string) gin.HandlerFunc {
 		if err != nil {
 			c.Header("WWW-Authenticate", "Bearer realm=\"access_token\"")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrClientNotFound,
+				"error": "The client associated with this token could not be found",
 			})
 			return
 		}
@@ -231,8 +212,7 @@ func AuthenticateToken(db *Database, scope ...string) gin.HandlerFunc {
 			}
 			c.Header("WWW-Authenticate", "Bearer realm=\"access_token\"")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrInsufficientPermission,
+				"error": "Insufficient client permission",
 			})
 			return
 		}
@@ -260,8 +240,7 @@ func SignupRoute(db *Database, ms MailSender) gin.HandlerFunc {
 		// Extract JSON body.
 		if err := c.BindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  ErrMissingFields,
+				"error": "Missing required fields",
 			})
 			return
 		}
@@ -269,8 +248,7 @@ func SignupRoute(db *Database, ms MailSender) gin.HandlerFunc {
 		// Validate Email.
 		if !ValidateEmail(req.Email) {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  ErrInvalidEmail,
+				"error": "Email address must be a valid @ufl.edu address",
 			})
 			return
 		}
@@ -278,8 +256,7 @@ func SignupRoute(db *Database, ms MailSender) gin.HandlerFunc {
 		// Ensure password is sufficiently strong.
 		if err := ValidatePassword(req.Password); err != "" {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  err,
+				"error": "Password must be at least 12 characters and must contain digits, letters, and a special symbol",
 			})
 			return
 		}
@@ -287,8 +264,7 @@ func SignupRoute(db *Database, ms MailSender) gin.HandlerFunc {
 		// Ensure email is unique.
 		if _, err := db.ReadUserByEmail(req.Email); err == nil {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  ErrEmailTaken,
+				"error": "An account already exists with this email",
 			})
 			return
 		}
@@ -296,8 +272,8 @@ func SignupRoute(db *Database, ms MailSender) gin.HandlerFunc {
 		// Ensure verification email hasn't already been sent.
 		if _, err := db.ReadPendingUserByEmail(req.Email); err == nil {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  ErrEmailAlreadySent,
+				"error": "Please verify your email address. If you have not received an email, " +
+					"please check your spam folder and wait up to 10 minutes before trying again",
 			})
 			return
 		}
@@ -305,7 +281,6 @@ func SignupRoute(db *Database, ms MailSender) gin.HandlerFunc {
 		/* TODO: CAPTCHA
 		   if !validateCaptcha(req.Captcha) {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
 				"error":  ErrInvalidCaptcha,
 			})
 			return
@@ -318,8 +293,7 @@ func SignupRoute(db *Database, ms MailSender) gin.HandlerFunc {
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "error",
-				"error":  ErrHashError,
+				"error": "Internal server error. Please try again later",
 			})
 			return
 		}
@@ -331,16 +305,14 @@ func SignupRoute(db *Database, ms MailSender) gin.HandlerFunc {
 				"", req.Email, string(hash), req.FirstName,
 				req.LastName, []string{}, 0, 0,
 			},
-			TTL: 1200,
+			TTL: 600, // 10 minutes.
 		}
 
 		// Save pending user to database.
 		id, err := db.CreatePendingUser(pendingUser)
 		if err != nil {
-			fmt.Println(err)
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "error",
-				"error":  ErrDbFailure,
+				"error": "Internal server error. Please try again later",
 			})
 			return
 		}
@@ -348,28 +320,14 @@ func SignupRoute(db *Database, ms MailSender) gin.HandlerFunc {
 		// Send verification email.
 		if !ms.SendSignupVerification(id, pendingUser) {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "error",
-				"error":  ErrEmailFailure,
+				"error": "Internal server error. Please try again later",
 			})
 			return
 		}
 
 		c.JSON(http.StatusOK, gin.H{
-			"status":  "success",
 			"message": "awaiting email verification",
 		})
-	}
-}
-
-func AuthorizeRoute(db *Database, config Config) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if config.GIN_MODE == "debug" && config.FE_PROXY_PORT != "" {
-			c.Redirect(http.StatusFound, "http://localhost:"+config.FE_PROXY_PORT)
-			return
-		}
-
-		// TODO:
-		c.JSON(http.StatusOK, gin.H{"status": "success"})
 	}
 }
 
@@ -386,8 +344,7 @@ func SigninRoute(db *Database, config Config, ms MailSender) gin.HandlerFunc {
 		// Extract JSON body.
 		if err := c.BindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  ErrMissingFields,
+				"error": "Missing required fields",
 			})
 			return
 		}
@@ -396,16 +353,14 @@ func SigninRoute(db *Database, config Config, ms MailSender) gin.HandlerFunc {
 		userExists, err := db.ReadUserByEmail(req.Email)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrIncorrectUserPass,
+				"error": "Incorrect username or password",
 			})
 			return
 		}
 
 		if !VerifyPassword(userExists.Password, req.Password) {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrIncorrectUserPass,
+				"error": "Incorrect username or password",
 			})
 			return
 		}
@@ -417,8 +372,7 @@ func SigninRoute(db *Database, config Config, ms MailSender) gin.HandlerFunc {
 			// Check for pending sign-in verification.
 			if _, err := db.ReadVerifyEmailSigninByEmail(req.Email); err == nil {
 				c.JSON(http.StatusBadRequest, gin.H{
-					"status": "error",
-					"error":  ErrEmailAlreadySent,
+					"error": "Please check your email address for a confirmation email",
 				})
 				return
 			}
@@ -431,23 +385,20 @@ func SigninRoute(db *Database, config Config, ms MailSender) gin.HandlerFunc {
 
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
-					"status": "error",
-					"error":  ErrDbFailure,
+					"error": "Internal server error. Please try again later",
 				})
 				return
 			}
 
 			if !ms.SendSigninVerification(eid, req.Email) {
 				c.JSON(http.StatusInternalServerError, gin.H{
-					"status": "error",
-					"error":  ErrEmailFailure,
+					"error": "Internal server error. Please try again later",
 				})
 				return
 			}
 
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrVerifyEmail,
+				"error": "Please check your email address for a confirmation email",
 			})
 
 			return
@@ -457,8 +408,7 @@ func SigninRoute(db *Database, config Config, ms MailSender) gin.HandlerFunc {
 		jwt := NewJWT(config.SECRET, userExists)
 		if jwt == "" {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "error",
-				"error":  ErrNewJWT,
+				"error": "Internal server error. Please try again later",
 			})
 			return
 		}
@@ -466,6 +416,14 @@ func SigninRoute(db *Database, config Config, ms MailSender) gin.HandlerFunc {
 		// Assign JWT cookie.
 		// TODO: Change localhost domain, consider SSL options.
 		c.SetCookie("ows-jwt", jwt, 7200, "/", "localhost", false, true)
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
+	}
+}
+
+func SignoutRoute() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.SetCookie("ows-jwt", "", -1, "/", "localhost", false, true)
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	}
 }
 
@@ -479,8 +437,7 @@ func VerifyEmailRoute(db *Database) gin.HandlerFunc {
 		ref := c.DefaultQuery("ref", "")
 		if (vtype != "signup" && vtype != "signin") || ref == "" {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  ErrInvalidURLParam,
+				"error": "Invalid URL",
 			})
 			return
 		}
@@ -490,8 +447,7 @@ func VerifyEmailRoute(db *Database) gin.HandlerFunc {
 			pending, err := db.ReadPendingUser(ref)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
-					"status": "error",
-					"error":  "bad or expired URL. Please try again",
+					"error": "Invalid URL",
 				})
 				return
 			}
@@ -499,8 +455,7 @@ func VerifyEmailRoute(db *Database) gin.HandlerFunc {
 			// Delete pending user model.
 			if err := db.DeletePendingUser(ref); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
-					"status": "error",
-					"error":  ErrDbFailure,
+					"error": "Internal server error. Please try again later",
 				})
 				return
 			}
@@ -512,13 +467,12 @@ func VerifyEmailRoute(db *Database) gin.HandlerFunc {
 			// Sign up.
 			if _, err := db.CreateUser(pending.User); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
-					"status": "error",
-					"error":  ErrDbFailure,
+					"error": "Internal server error. Please try again later",
 				})
 				return
 			}
 
-			c.JSON(http.StatusOK, gin.H{"status": "success"})
+			c.JSON(http.StatusOK, gin.H{"message": "success"})
 			return
 		}
 
@@ -526,8 +480,7 @@ func VerifyEmailRoute(db *Database) gin.HandlerFunc {
 		verif, err := db.ReadVerifyEmailSignin(ref)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  "bad or expired URL. Please try again.",
+				"error": "Invalid URL",
 			})
 			return
 		}
@@ -536,8 +489,7 @@ func VerifyEmailRoute(db *Database) gin.HandlerFunc {
 		if err := db.DeleteVerifyEmailSignin(ref); err != nil {
 			fmt.Println("Error 1: ", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "error",
-				"error":  ErrDbFailure,
+				"error": "Internal server error. Please try again later",
 			})
 			return
 		}
@@ -547,8 +499,7 @@ func VerifyEmailRoute(db *Database) gin.HandlerFunc {
 		if err != nil {
 			fmt.Println("Error 2: ", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "error",
-				"error":  ErrDbFailure,
+				"error": "Internal server error. Please try again later",
 			})
 			return
 		}
@@ -560,32 +511,22 @@ func VerifyEmailRoute(db *Database) gin.HandlerFunc {
 		if mod, err := db.UpdateUser(usr); err != nil || mod == 0 {
 			fmt.Println("Error 3: ", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "error",
-				"error":  ErrDbFailure,
+				"error": "Internal server error. Please try again later",
 			})
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"status": "success"})
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	}
 }
 
 func GrantRoute(db *Database) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req struct {
-			ResponseType string   `json:"response_type" binding:"required"`
-			ClientID     string   `json:"client_id" binding:"required"`
-			RedirectURI  string   `json:"redirect_uri" binding:"required"`
-			Scope        []string `json:"scope" binding:"required"`
-			State        string   `json:"state" binding:"required"`
-		}
-
 		// Get underlying user (passed in via AuthenticateUser route).
 		userAny, ok := c.Get("user")
 		if !ok {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "error",
-				"error":  ErrUserNotFound,
+				"error": "User not found",
 			})
 			return
 		}
@@ -594,65 +535,54 @@ func GrantRoute(db *Database) gin.HandlerFunc {
 		user, ok := userAny.(UserModel)
 		if !ok {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "error",
-				"error":  ErrUserNotFound,
+				"error": "User not found",
 			})
 			return
 		}
 
-		// TODO: The following error responses are client-facing.
-		// Perhaps a dedicated error page should be served instead.
-
-		// Extract JSON body.
-		if err := c.BindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  ErrMissingFields,
-			})
-			return
-		}
+		// Gather query parameters.
+		responseType := c.DefaultQuery("response_type", "")
+		clientID := c.DefaultQuery("client_id", "")
+		redirectURI := c.DefaultQuery("redirect_uri", "")
+		state := c.DefaultQuery("state", "")
 
 		// Validate response type
-		if req.ResponseType != "code" && req.ResponseType != "token" {
+		if responseType != "code" && responseType != "token" {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  ErrBadRespType,
-			})
-			return
-		}
-
-		// Validate scope.
-		if !ValidateScope(req.ResponseType, req.Scope) {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  ErrInvalidScope,
+				"error": "response_type must be 'code' or 'token'",
 			})
 			return
 		}
 
 		// Validate state.
-		if req.State == "" {
+		if state == "" {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  ErrInvalidState,
+				"error": "Invalid state",
 			})
 			return
 		}
 
 		// Verify client ID exists.
-		client, err := db.ReadClient(req.ClientID)
+		client, err := db.ReadClient(clientID)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrClientNotFound,
+				"error": "Client not found",
 			})
+			return
+		}
+
+		redirectDecoded, err := url.QueryUnescape(redirectURI)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Invalid redirect_uri",
+			})
+			return
 		}
 
 		// Verify request redirect_uri matches client redirect_uri.
-		if client.RedirectURI != req.RedirectURI {
+		if client.RedirectURI != redirectDecoded {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrDifferentRedirectURI,
+				"error": "redirect_uri does not match client-registered redirect_uri",
 			})
 			return
 		}
@@ -661,19 +591,9 @@ func GrantRoute(db *Database) gin.HandlerFunc {
 		// the integrity of redirect_uri can be verified).
 
 		// Verify request response_type matches client configuration.
-		if client.ResponseType != req.ResponseType {
+		if client.ResponseType != responseType {
 			redirect := fmt.Sprintf("%s?error=invalid_request&state=%s",
-				client.RedirectURI, req.State)
-			c.Redirect(http.StatusFound, redirect)
-			return
-		}
-
-		// Verify request scope matches client configuration.
-		sort.Strings(client.Scope)
-		sort.Strings(req.Scope)
-		if !reflect.DeepEqual(client.Scope, req.Scope) {
-			redirect := fmt.Sprintf("%s?error=invalid_scope&state=%s",
-				client.RedirectURI, req.State)
+				client.RedirectURI, state)
 			c.Redirect(http.StatusFound, redirect)
 			return
 		}
@@ -691,14 +611,14 @@ func GrantRoute(db *Database) gin.HandlerFunc {
 			id, err := db.CreateAccessToken(token)
 			if err != nil {
 				redirect := fmt.Sprintf("%s?error=server_error&state=%s",
-					client.RedirectURI, req.State)
+					client.RedirectURI, state)
 				c.Redirect(http.StatusFound, redirect)
 				return
 			}
 
 			// Redirect user.
 			uri := fmt.Sprintf("%s?access_token=%s&token_type=bearer&expires_in=1200&state=%s",
-				client.RedirectURI, id, req.State)
+				client.RedirectURI, id, state)
 
 			c.Redirect(http.StatusFound, uri)
 			return
@@ -716,14 +636,14 @@ func GrantRoute(db *Database) gin.HandlerFunc {
 		id, err := db.CreateAuthCode(code)
 		if err != nil {
 			redirect := fmt.Sprintf("%s?error=server_error&state=%s",
-				client.RedirectURI, req.State)
+				client.RedirectURI, state)
 			c.Redirect(http.StatusFound, redirect)
 			return
 		}
 
 		// Redirect user.
 		uri := fmt.Sprintf("%s?code=%s&state=%s", client.RedirectURI,
-			id, req.State)
+			id, state)
 
 		c.Redirect(http.StatusFound, uri)
 	}
@@ -735,8 +655,7 @@ func TokenRoute(db *Database) gin.HandlerFunc {
 		clientAny, ok := c.Get("client")
 		if !ok {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "error",
-				"error":  ErrClientNotFound,
+				"error": "Client not found",
 			})
 			return
 		}
@@ -745,8 +664,7 @@ func TokenRoute(db *Database) gin.HandlerFunc {
 		client, ok := clientAny.(ClientModel)
 		if !ok {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "error",
-				"error":  ErrClientNotFound,
+				"error": "Client not found",
 			})
 			return
 		}
@@ -761,8 +679,7 @@ func TokenRoute(db *Database) gin.HandlerFunc {
 		// Validate grant type.
 		if grantType != "refresh_token" && grantType != "authorization_code" {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  ErrInvalidGrantType,
+				"error": "Grant type must be 'refresh_token' or 'authorization_code'",
 			})
 			return
 		}
@@ -771,8 +688,7 @@ func TokenRoute(db *Database) gin.HandlerFunc {
 			// Validate refresh token parameter.
 			if refreshToken == "" {
 				c.JSON(http.StatusBadRequest, gin.H{
-					"status": "error",
-					"error":  ErrInvalidRefreshToken,
+					"error": "Invalid refresh token",
 				})
 				return
 			}
@@ -781,8 +697,7 @@ func TokenRoute(db *Database) gin.HandlerFunc {
 			token, err := db.ReadRefreshToken(refreshToken)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
-					"status": "error",
-					"error":  ErrInvalidRefreshToken,
+					"error": "Refresh token expired or could not be found",
 				})
 				return
 			}
@@ -791,8 +706,7 @@ func TokenRoute(db *Database) gin.HandlerFunc {
 			if (token.Created + token.TTL) > time.Now().Unix() {
 				db.DeleteRefreshToken(token.ID)
 				c.JSON(http.StatusBadRequest, gin.H{
-					"status": "error",
-					"error":  ErrTokenExpired,
+					"error": "Refresh token expired or could not be found",
 				})
 				return
 			}
@@ -801,8 +715,7 @@ func TokenRoute(db *Database) gin.HandlerFunc {
 			// authenticated client.
 			if token.ClientID != client.ID {
 				c.JSON(http.StatusUnauthorized, gin.H{
-					"status": "error",
-					"error":  ErrRefreshWrongClient,
+					"error": "Refresh token was not issued to this client",
 				})
 				return
 			}
@@ -811,8 +724,7 @@ func TokenRoute(db *Database) gin.HandlerFunc {
 			if _, err := db.ReadUser(token.UserID); err != nil {
 				db.DeleteRefreshToken(token.ID)
 				c.JSON(http.StatusBadRequest, gin.H{
-					"status": "error",
-					"error":  ErrUserNotFound,
+					"error": "The user associated with this token could not be found",
 				})
 				return
 			}
@@ -829,15 +741,14 @@ func TokenRoute(db *Database) gin.HandlerFunc {
 			atokenID, err := db.CreateAccessToken(atoken)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
-					"status": "error",
-					"error":  ErrDbFailure,
+					"error": "Internal server error. Please try again later",
 				})
 				return
 			}
 
 			// Return token.
 			c.JSON(http.StatusOK, gin.H{
-				"status":        "success",
+				"message":       "success",
 				"token":         atokenID,
 				"token_type":    "bearer",
 				"expires_in":    1200,
@@ -852,8 +763,7 @@ func TokenRoute(db *Database) gin.HandlerFunc {
 		// Ensure required params are non-nil.
 		if code == "" || redirectUri == "" || clientID == "" {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  ErrMalformedURLParams,
+				"error": "Malformed or missing URL parameters",
 			})
 			return
 		}
@@ -862,8 +772,7 @@ func TokenRoute(db *Database) gin.HandlerFunc {
 		codeExists, err := db.ReadAuthCode(code)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrTokenExpired,
+				"error": "Token expired or could not be found",
 			})
 			return
 		}
@@ -872,8 +781,7 @@ func TokenRoute(db *Database) gin.HandlerFunc {
 		if (codeExists.Created + codeExists.TTL) > time.Now().Unix() {
 			db.DeleteAuthCode(codeExists.ID)
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrTokenExpired,
+				"error": "Token expired or could not be found",
 			})
 			return
 		}
@@ -882,8 +790,7 @@ func TokenRoute(db *Database) gin.HandlerFunc {
 		if clientID != codeExists.ClientID {
 			db.DeleteAuthCode(codeExists.ID)
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  ErrGrantWrongClient,
+				"error": "Token was not issued to this client",
 			})
 			return
 		}
@@ -893,8 +800,7 @@ func TokenRoute(db *Database) gin.HandlerFunc {
 		if err != nil {
 			db.DeleteAuthCode(codeExists.ID)
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  ErrClientNotFound,
+				"error": "The client associated with this token could not be found",
 			})
 			return
 		}
@@ -903,8 +809,7 @@ func TokenRoute(db *Database) gin.HandlerFunc {
 		if clientExists.RedirectURI != redirectUri {
 			db.DeleteAuthCode(codeExists.ID)
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  ErrDifferentRedirectURI,
+				"error": "redirect_uri and client-registered redirect_uri do not match",
 			})
 			return
 		}
@@ -913,8 +818,7 @@ func TokenRoute(db *Database) gin.HandlerFunc {
 		if _, err := db.ReadUser(codeExists.UserID); err != nil {
 			db.DeleteAuthCode(codeExists.ID)
 			c.JSON(http.StatusNotFound, gin.H{
-				"status": "error",
-				"error":  ErrUserNotFound,
+				"error": "The user associated with this token could not be found",
 			})
 			return
 		}
@@ -931,8 +835,7 @@ func TokenRoute(db *Database) gin.HandlerFunc {
 		if err != nil {
 			db.DeleteAuthCode(codeExists.ID)
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "error",
-				"error":  ErrDbFailure,
+				"error": "Internal server error. Please try again later",
 			})
 			return
 		}
@@ -950,15 +853,14 @@ func TokenRoute(db *Database) gin.HandlerFunc {
 			db.DeleteAccessToken(aid)
 			db.DeleteAuthCode(codeExists.ID)
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "error",
-				"error":  ErrDbFailure,
+				"error": "Internal server error. Please try again later",
 			})
 			return
 		}
 
 		// Return token.
 		c.JSON(http.StatusOK, gin.H{
-			"status":        "success",
+			"message":       "success",
 			"access_token":  aid,
 			"token_type":    "bearer",
 			"expires_in":    1200,

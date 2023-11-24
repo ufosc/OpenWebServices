@@ -17,15 +17,14 @@ func GetClientRoute(db *Database) gin.HandlerFunc {
 		client, err := db.ReadClient(id)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{
-				"status": "error",
-				"error":  ErrClientNotFound,
+				"error": "Client not found",
 			})
 			return
 		}
 
 		// Found client.
 		c.JSON(http.StatusOK, gin.H{
-			"status":        "success",
+			"message":       "success",
 			"id":            client.ID,
 			"name":          client.Name,
 			"description":   client.Description,
@@ -49,8 +48,7 @@ func CreateClientRoute(db *Database) gin.HandlerFunc {
 		// Extract JSON body.
 		if err := c.BindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  ErrMissingFields,
+				"error": "Missing required fields",
 			})
 			return
 		}
@@ -59,8 +57,7 @@ func CreateClientRoute(db *Database) gin.HandlerFunc {
 		userAny, ok := c.Get("user")
 		if !ok {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "error",
-				"error":  ErrUserNotFound,
+				"error": "User could not be found",
 			})
 			return
 		}
@@ -68,8 +65,7 @@ func CreateClientRoute(db *Database) gin.HandlerFunc {
 		user, ok := userAny.(UserModel)
 		if !ok {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "error",
-				"error":  ErrUserNotFound,
+				"error": "User could not be found",
 			})
 			return
 		}
@@ -77,8 +73,7 @@ func CreateClientRoute(db *Database) gin.HandlerFunc {
 		// Ensure description < 300 chars.
 		if len(req.Description) > 300 {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  "description too long (max 300 chars)",
+				"error": "description too long (max 300 chars)",
 			})
 			return
 		}
@@ -86,8 +81,7 @@ func CreateClientRoute(db *Database) gin.HandlerFunc {
 		// Validate response type.
 		if req.ResponseType != "code" && req.ResponseType != "token" {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  ErrBadRespType,
+				"error": "response_type must be 'code' or 'token'",
 			})
 			return
 		}
@@ -95,8 +89,7 @@ func CreateClientRoute(db *Database) gin.HandlerFunc {
 		// Validate RedirectURI.
 		if !ValidateRedirectURI(req.RedirectURI) {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  ErrInvalidRedirectURI,
+				"error": "Invalid redirect_uri",
 			})
 			return
 		}
@@ -104,8 +97,7 @@ func CreateClientRoute(db *Database) gin.HandlerFunc {
 		// Validate scope.
 		if !ValidateScope(req.ResponseType, req.Scope) {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  ErrInvalidScope,
+				"error": "Invalid scope",
 			})
 			return
 		}
@@ -121,8 +113,7 @@ func CreateClientRoute(db *Database) gin.HandlerFunc {
 
 		if !hasRealm {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"status": "error",
-				"error":  ErrInvalidRealm,
+				"error": "You are not authorized to create clients",
 			})
 			return
 		}
@@ -130,8 +121,7 @@ func CreateClientRoute(db *Database) gin.HandlerFunc {
 		// Ensure name is unique.
 		if _, err := db.ReadClientByName(req.Name); err == nil {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"status": "error",
-				"error":  ErrClientNameTaken,
+				"error": "Client name has already been registered",
 			})
 			return
 		}
@@ -140,8 +130,7 @@ func CreateClientRoute(db *Database) gin.HandlerFunc {
 		keyBytes := make([]byte, 256)
 		if _, err := rand.Read(keyBytes); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "error",
-				"error":  ErrHashError,
+				"error": "Internal server error. Please try again later",
 			})
 			return
 		}
@@ -152,8 +141,7 @@ func CreateClientRoute(db *Database) gin.HandlerFunc {
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "error",
-				"error":  ErrHashError,
+				"error": "Internal server error. Please try again later",
 			})
 			return
 		}
@@ -173,14 +161,13 @@ func CreateClientRoute(db *Database) gin.HandlerFunc {
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"status": "error",
-				"error":  ErrDbFailure,
+				"error": "Internal server error. Please try again later",
 			})
 			return
 		}
 
 		c.JSON(http.StatusOK, gin.H{
-			"status":        "success",
+			"message":       "success",
 			"client_id":     cid,
 			"name":          req.Name,
 			"description":   req.Description,
