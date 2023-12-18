@@ -3,6 +3,8 @@ package main
 import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/ufosc/OpenWebServices/pkg/authapi"
+	"github.com/ufosc/OpenWebServices/pkg/authmw"
 	"time"
 )
 
@@ -23,35 +25,28 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Mail sender.
-	ms := NewMailSender(config)
-	ms.Start(1)
-	defer ms.Stop()
+	// API controller.
+	api, err := authapi.CreateAPIController(config.MONGO_URI,
+		config.DB_NAME, config.NOTIF_EMAIL_ADDR, config.SECRET)
 
-	// Database.
-	db, err := NewDatabase(config.MONGO_URI, config.DB_NAME)
 	if err != nil {
 		panic(err)
 	}
-	defer db.Stop()
+
+	defer api.Stop()
 
 	// Auth routes.
-	r.POST("/auth/signup", SignupRoute(db, ms))
-	r.POST("/auth/signin", SigninRoute(db, config, ms))
-	r.POST("/auth/signout", SignoutRoute())
-	r.GET("/auth/verify", VerifyEmailRoute(db))
-	r.GET("/auth/grant", AuthenticateUser(db, config), GrantRoute(db))
-	r.GET("/auth/token", AuthenticateClient(db), TokenRoute(db))
-	r.DELETE("/auth/token/:id", AuthenticateClient(db), DeleteTokenRoute(db))
+	r.POST("/auth/signup", api.SignUpRoute())
+	r.POST("/auth/signin", api.SignInRoute())
+	r.GET("/auth/verify/:ref", api.VerifyEmailRoute())
+	r.POST("/auth/client", api.AuthClientRoute())
+	r.GET("/auth/authorize", api.AuthorizationRoute())
+	r.GET("/auth/token", api.TokenRoute())
 
-	// User API.
-	r.GET("/user/:id", AuthenticateToken(db), func(c *gin.Context) {}) // Serve according to scope.
-	r.PUT("/user/:id", AuthenticateToken(db, "user.modify"), func(c *gin.Context) {})
-
-	// Client API: Clients do not get modified/updated. A new one must be
-	// created.
-	r.GET("/client/:id", GetClientRoute(db))
-	r.POST("/client", AuthenticateToken(db, "client.create"), CreateClientRoute(db))
+	// Resource API.
+	r.GET("/client/:id", api.GetClientRoute())
+	r.POST("/client", authmw.AuthenticateUser(config.SECRET, api.DB(),
+		"client.create"), api.CreateClientRoute())
 
 	r.Run()
 }
