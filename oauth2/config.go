@@ -13,6 +13,7 @@ type Config struct {
 	DB_NAME          string
 	NOTIF_EMAIL_ADDR string
 	SECRET           string
+	PORT             string
 }
 
 // GetDefaultConfig populates a Config instance with default configuration
@@ -23,6 +24,7 @@ func GetDefaultConfig() (c Config) {
 	c.DB_NAME = "testing"
 	c.NOTIF_EMAIL_ADDR = "no-reply.notifications@ufosc.org"
 	c.SECRET = "369369369369369369"
+	c.PORT = "8080"
 	return c
 }
 
@@ -48,6 +50,9 @@ func GetConfig() Config {
 	}
 	if secret := os.Getenv("SECRET"); secret != "" {
 		c.SECRET = secret
+	}
+	if port := os.Getenv("PORT"); port != "" {
+		c.PORT = port
 	}
 
 	return c
