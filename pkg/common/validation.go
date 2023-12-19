@@ -4,12 +4,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"net/mail"
 	"regexp"
-	"strings"
+	pwd "github.com/wagslane/go-password-validator"
 )
-
-const alpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-const special = "`~!@#$%^&*()_-=+[{]}\\|;\"',<.>/"
-const numeric = "0123456789"
 
 // ValidateEmail checks whether email is a valid email address.
 func ValidateEmail(email string) bool {
@@ -19,33 +15,9 @@ func ValidateEmail(email string) bool {
 	return true
 }
 
-// ValidatePassword checks whether password is at least 12 chars, contains
-// both digits and characters, and has at least 1 special character.
-func ValidatePassword(password string) string {
-
-	// Must be a minimum of 12 characters.
-	if len(password) < 12 {
-		return "password must be at least 12 characters"
-	}
-
-	// TODO: this is checking whether the password contains valid
-	// characters, not whether all characters are valid.
-
-	// Must be alphanumeric (both).
-	if !strings.ContainsAny(password, alpha) {
-		return "password must contain at least one letter"
-	}
-
-	if !strings.ContainsAny(password, numeric) {
-		return "password must contain at least one digit"
-	}
-
-	// Must have 1 special character.
-	if !strings.ContainsAny(password, special) {
-		return "password must contain at least one special character"
-	}
-
-	return ""
+// ValidatePassword checks whether password is strong enough.
+func ValidatePassword(password string) error {
+	return pwd.Validate(password, 60)
 }
 
 // VerifyPassword verifies that a given password matches the hash.

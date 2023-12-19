@@ -30,18 +30,25 @@ func (cntrl *DefaultAPIController) SignUpRoute() gin.HandlerFunc {
 			return
 		}
 
+		if len(req.FirstName) < 2 || len(req.LastName) < 2 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "first and/or last name are too short",
+			})
+			return
+		}
+
 		// Validate Email.
 		if !common.ValidateEmail(req.Email) {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Email address must be a valid @ufl.edu address",
+				"error": "invalid email address",
 			})
 			return
 		}
 
 		// Ensure password is sufficiently strong.
-		if err := common.ValidatePassword(req.Password); err != "" {
+		if err := common.ValidatePassword(req.Password); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Password must be at least 12 characters and must contain digits, letters, and a special symbol",
+				"error": fmt.Sprint(err),
 			})
 			return
 		}
@@ -93,7 +100,6 @@ func (cntrl *DefaultAPIController) SignUpRoute() gin.HandlerFunc {
 		// Save pending user to database.
 		id, err := cntrl.db.Users().CreatePending(pendingUser)
 		if err != nil {
-			fmt.Println(err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Internal server error. Please try again later",
 			})
