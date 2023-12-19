@@ -13,6 +13,7 @@ export type TypeSignupBody = {
 
 export interface APIResponse {
   message?: string;
+  jwt?: string;
   error?: string;
 }
 
@@ -30,7 +31,6 @@ export interface TypeAuthGrant {
   response_type: string | null;
   client_id: string | null;
   redirect_uri: string | null;
-  scope: string | null;
   state: string | null;
 }
 

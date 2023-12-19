@@ -1,12 +1,5 @@
 export const ValidateEmail = (email : string) => {
-  if (email.match(/^[\w-\.]+@ufl.edu$/)) {
-    return true
-  }
-  return false
-}
-
-export const ValidatePassword = (pwd : string) => {
-  if (pwd.match(/^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{12,}$/)) {
+  if (email.match(/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/)) {
     return true
   }
   return false

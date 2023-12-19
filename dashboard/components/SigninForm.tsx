@@ -3,11 +3,14 @@
 import { ArrowRight } from '@carbon/icons-react'
 import { TypeSigninBody } from '@/APIController/types'
 import { IsAPIFailure, IsAPISuccess, PostSignin } from '@/APIController/API'
-import { ValidatePassword, ValidateEmail } from '@/APIController/Validation'
+import { ValidateEmail } from '@/APIController/Validation'
 import { useTheme, Button, Form, Heading, TextInput, Link } from '@carbon/react'
 import { useState } from 'react'
+import { useCookies } from 'next-client-cookies'
 
 const SigninForm = (props: { setView: Function }) => {
+  const cookies = useCookies()
+
   const headingColor = () => {
     const { theme } = useTheme()
     return (theme == "white") ? "black" : "white"
@@ -20,19 +23,16 @@ const SigninForm = (props: { setView: Function }) => {
 
     // Validate email address.
     if (!ValidateEmail(form.email)) {
-      setHasError("Email address must be a valid @ufl.edu address")
-      return
-    }
-
-    // Validate password.
-    if (!ValidatePassword(form.password)) {
-      setHasError("Password must be at least 12 characters. It must contain digits, letters, and a special symbol")
+      setHasError("Email address is invalid")
       return
     }
 
     // Make API call.
     PostSignin(form).then((res) => {
       if (IsAPISuccess(res)) {
+	if (typeof res.jwt != "undefined") {
+	  cookies.set('ows-jwt', res.jwt)
+	}
 	location.reload()
 	return
       }

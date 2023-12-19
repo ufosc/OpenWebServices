@@ -14,6 +14,7 @@
     "axios": "^1.6.2",
     "dotenv": "^16.3.1",
     "next": "14.0.2",
+    "next-client-cookies": "^1.1.0",
     "react": "^18",
     "react-dom": "^18",
     "sass": "^1.69.5",

@@ -3,10 +3,9 @@
 import { useState } from 'react'
 import { Content, Theme } from '@carbon/react'
 import Header from '@/components/NavHeader'
-import { JWTContext, RandContext } from './context'
+import { RandContext } from './context'
 
-const Provider = (props: { children : any; jwt : string | undefined,
-  random: number }) => {
+const Provider = (props: { children : any; random: number }) => {
   const [theme, setTheme] = useState("white")
 
   const savedTheme = localStorage.getItem("theme")
@@ -23,12 +22,10 @@ const Provider = (props: { children : any; jwt : string | undefined,
 
   return (
     <Theme theme={theme}>
-      <JWTContext.Provider value={props.jwt}>
-	<RandContext.Provider value={props.random}>
-	  <Header setTheme={updateTheme} />
-	  <Content>{props.children}</Content>
-	</RandContext.Provider>
-      </JWTContext.Provider>
+      <RandContext.Provider value={props.random}>
+	<Header setTheme={updateTheme} />
+	<Content>{props.children}</Content>
+      </RandContext.Provider>
     </Theme>
   )
 }

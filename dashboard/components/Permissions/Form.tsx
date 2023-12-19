@@ -5,17 +5,20 @@ import { ArrowRight, Wikis } from '@carbon/icons-react'
 import { useTheme, Button, Form, Heading, Accordion, AccordionItem } from '@carbon/react'
 import { TypeAuthGrant } from '@/APIController/types'
 import { PublicScope, EmailScope } from './scopes'
+import { useCookies } from 'next-client-cookies'
 
 const PermissionsForm = (props: { client: TypeAuthGrant, state: string }) => {
+  const cookies = useCookies()
+
   const headingColor = () => {
     const { theme } = useTheme()
     return (theme == "white") ? "black" : "white"
   }
 
   const onAccept = () => {
-    location.replace(`/auth/grant?response_type=${props.client.response_type}` +
+    location.replace(`/auth/authorize?response_type=${props.client.response_type}` +
       `&client_id=${props.client.id}&redirect_uri=${encodeURIComponent(props.client.redirect_uri)}` +
-      `&state=${props.state}`)
+      `&state=${props.state}&assertion=${cookies.get('ows-jwt')}`)
   }
 
   const onReject = () => {

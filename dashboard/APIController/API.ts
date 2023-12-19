@@ -47,17 +47,19 @@ export const PostSignup = (body: TypeSignupBody) => {
   })
 }
 
-export const PostSignout = () => {
+export const GetUser = (jwt : string) => {
   return new Promise((resolve: Function, reject: Function) => {
-    axios.post('/auth/signout').then((res : AxiosResponse) => {
-      resolve(res.data)
-    }).catch((err : AxiosError) => {
-      if (err.response && IsAPIFailure(err.response.data)) {
-	resolve(err.response.data)
-	return
-      }
-      reject(err)
-    })
+    axios.get('/user', { headers: { 'Authorization': `Bearer ${jwt}`} })
+      .then((res : AxiosResponse) => {
+	resolve(res.data)
+      })
+      .catch((err : AxiosError) => {
+	if (err.response && IsAPIFailure(err.response.data)) {
+	  resolve(err.response.data)
+	  return
+	}
+	reject(err)
+      })
   })
 }
 

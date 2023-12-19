@@ -1,15 +1,7 @@
 /** @type {import('next').NextConfig} */
 module.exports = {
   async rewrites() {
-    return [
-      {
-        source: '/auth/authorize',
-        destination: '/authorize',
-      },
-      {
-        source: '/auth/authorize',
-        destination: '/authorize',
-      },
+      return [
       {
         source: '/auth/signup',
         destination: 'http://localhost:8080/auth/signup',
@@ -27,8 +19,8 @@ module.exports = {
         destination: 'http://localhost:8080/auth/verify',
       },
       {
-        source: '/auth/grant',
-        destination: 'http://localhost:8080/auth/grant',
+        source: '/auth/authorize',
+        destination: 'http://localhost:8080/auth/authorize',
       },
       {
         source: '/auth/token',
@@ -41,6 +33,10 @@ module.exports = {
       {
         source: '/client',
         destination: 'http://localhost:8080/client',
+      },
+      {
+        source: '/user',
+        destination: 'http://localhost:8080/user',
       },
     ]
   },

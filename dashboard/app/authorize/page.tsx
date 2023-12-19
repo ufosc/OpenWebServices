@@ -3,7 +3,6 @@
 import { GetClient, IsAPIFailure, IsAPISuccess } from '@/APIController/API'
 import { ValidateClientURLParams } from '@/APIController/Validation'
 import { TypeAuthGrant, TypeClient, TypeGetClientResponse } from '@/APIController/types'
-import { JWTContext } from '@/app/context'
 import AlertBanner from '@/components/AlertBanner'
 import ImageBanner from '@/components/ImageBanner/imagebanner'
 import PermissionsForm from '@/components/Permissions/Form'
@@ -11,7 +10,8 @@ import SigninForm from '@/components/SigninForm'
 import SignupForm from '@/components/SignupForm'
 import { Accordion, AccordionItem, Link, Loading } from '@carbon/react'
 import { redirect, useSearchParams } from 'next/navigation'
-import { useContext, useState } from 'react'
+import { useState } from 'react'
+import { useCookies } from 'next-client-cookies'
 import './style.scss'
 
 const ClientError = (props: { children: any }) => {
@@ -39,6 +39,7 @@ const ClientError = (props: { children: any }) => {
 }
 
 const Permissions = (props: { client : TypeAuthGrant }) => {
+
   // Validate response_type.
   if (props.client.response_type !== "code" && props.client.response_type !== "token") {
     return (
@@ -81,7 +82,7 @@ const Permissions = (props: { client : TypeAuthGrant }) => {
   // Fetch and verify client information.
   const [clientError, setClientError] = useState("")
   const [clientData, setClientData] = useState<TypeClient | null>(null)
-  if (clientData === null) {
+  if (clientData === null && clientError === "") {
     GetClient(props.client.client_id).then((res) => {
       if (!IsAPISuccess(res)) {
 	setClientError((IsAPIFailure(res) && typeof res.error != "undefined") ?
@@ -124,7 +125,8 @@ const Permissions = (props: { client : TypeAuthGrant }) => {
 }
 
 export default function Page() {
-  const jwt = useContext(JWTContext)
+  const cookies = useCookies()
+  const jwt = cookies.get('ows-jwt')
   const [view, setView] = useState<"signin" | "signup">("signin")
 
   // Gather client parameters.
@@ -133,7 +135,6 @@ export default function Page() {
     response_type: searchParams.get('response_type'),
     client_id: searchParams.get('client_id'),
     redirect_uri: searchParams.get('redirect_uri'),
-    scope: searchParams.get('scope'),
     state: searchParams.get('state')
   }
 

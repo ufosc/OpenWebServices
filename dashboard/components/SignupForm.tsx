@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { ArrowRight } from '@carbon/icons-react'
 import { useTheme, Form, Button, TextInput, Heading } from '@carbon/react'
 import { PostSignup, IsAPIFailure, IsAPISuccess } from '@/APIController/API'
-import { ValidateEmail, ValidatePassword } from '@/APIController/Validation'
+import { ValidateEmail } from '@/APIController/Validation'
 
 const SignupForm = (props: { setView: Function }) => {
   const headingColor = () => {
@@ -23,12 +23,6 @@ const SignupForm = (props: { setView: Function }) => {
     // Validate email address.
     if (!ValidateEmail(form.email)) {
       setHasError("Email address must be a valid @ufl.edu address")
-      return
-    }
-
-    // Validate password.
-    if (!ValidatePassword(form.password)) {
-      setHasError("Password must be at least 12 characters, and must contain digits, letters, and a special symbol")
       return
     }
 
