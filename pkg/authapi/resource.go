@@ -17,8 +17,66 @@ import (
 // defined by the client's scope.
 func (cntrl *DefaultAPIController) GetUserRoute() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{
-			"error": "not implemented",
+
+		// Get client.
+		clientAny, ok := c.Get("client")
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Client not found",
+			})
+			return
+		}
+
+		client, ok := clientAny.(authdb.ClientModel)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Client not found",
+			})
+			return
+		}
+
+		// Get user.
+		userAny, ok := c.Get("user")
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "User not found",
+			})
+			return
+		}
+
+		user, ok := userAny.(authdb.UserModel)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "User not found",
+			})
+			return
+		}
+
+		// Currently, "email" is the highest level of privilege.
+		hasEmailScope := false
+		for _, scope := range client.Scope {
+			if scope == "email" {
+				hasEmailScope = true
+				break
+			}
+		}
+
+		if hasEmailScope {
+			c.JSON(http.StatusOK, gin.H{
+				"user_id":    user.ID,
+				"email":      user.Email,
+				"first_name": user.FirstName,
+				"last_name":  user.LastName,
+			})
+			return
+		}
+
+		// Public scope is mutually exclusive to "email" scope.
+		c.JSON(http.StatusOK, gin.H{
+			"message":    "success",
+			"user_id":    user.ID,
+			"first_name": user.FirstName,
+			"last_name":  user.LastName,
 		})
 	}
 }
@@ -54,6 +112,7 @@ func (cntrl *DefaultAPIController) GetClientRoute() gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{
+			"message":       "success",
 			"id":            clientExists.ID,
 			"name":          clientExists.Name,
 			"description":   clientExists.Description,
@@ -222,8 +281,48 @@ func (cntrl *DefaultAPIController) CreateClientRoute() gin.HandlerFunc {
 // DeleteClientRoute returns the gin middleware for deleting a client.
 func (cntrl *DefaultAPIController) DeleteClientRoute() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{
-			"error": "not implemented",
+		clientID := c.Param("id")
+		userAny, ok := c.Get("user")
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "User not found",
+			})
+			return
+		}
+
+		user, ok := userAny.(authdb.UserModel)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "User not found",
+			})
+			return
+		}
+
+		clientExists, err := cntrl.db.Clients().FindByID(clientID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "client not found",
+			})
+			return
+		}
+
+		if clientExists.Owner != user.ID {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "client does not belong to this user",
+			})
+			return
+		}
+
+		err = cntrl.db.Clients().DeleteByID(clientID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "could not delete client at this time, please try again later",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "client deleted successfully",
 		})
 	}
 }

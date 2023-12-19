@@ -14,7 +14,7 @@ import (
 func (cntrl *DefaultAPIController) AuthorizationRoute() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		// Get underlying user (from middleware).
+		// Get underlying user.
 		userAny, ok := c.Get("user")
 		if !ok {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -168,7 +168,7 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 		return
 	}
 
-	// Get underlying client (from middleware).
+	// Get underlying client.
 	clientAny, ok := c.Get("client")
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{

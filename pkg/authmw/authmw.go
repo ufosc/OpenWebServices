@@ -48,22 +48,19 @@ func AuthenticateUser(secret string, db authdb.Database,
 			return
 		}
 
-		// TODO; Ensure user has all realms.
-		expectedRealm := map[string]bool{}
-		for _, value := range realms {
-			expectedRealm[value] = true
+		// Ensure user has all required realms.
+		hasRealms := map[string]bool{}
+		for _, realm := range userExists.Realms {
+			hasRealms[realm] = true
 		}
 
-		for _, value := range userExists.Realms {
-			if expectedRealm[value] {
-				continue
+		for _, realm := range realms {
+			if !hasRealms[realm] {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+					"error": "insufficient user permission",
+				})
+				return
 			}
-
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "Insufficient user permission",
-			})
-
-			return
 		}
 
 		c.Set("user", userExists)
@@ -208,24 +205,22 @@ func AuthenticateBearer(db authdb.Database, scope ...string) gin.HandlerFunc {
 		}
 
 		// Verify token is authorized for this route.
-		expectedScope := map[string]bool{}
-		for _, value := range scope {
-			expectedScope[value] = true
+		haveScope := map[string]bool{}
+		for _, value := range clientExists.Scope {
+			haveScope[value] = true
 		}
 
-		for _, value := range clientExists.Scope {
-			if expectedScope[value] {
-				continue
+		for _, value := range scope {
+			if !haveScope[value] {
+				c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
+					"\" error=\"insufficient_scope\"")
+
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+					"error": "Insufficient client permission",
+				})
+
+				return
 			}
-
-			c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
-				"\" error=\"insufficient_scope\"")
-
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "Insufficient client permission",
-			})
-
-			return
 		}
 
 		// Write client, user, token to context.
