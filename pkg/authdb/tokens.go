@@ -10,11 +10,11 @@ import (
 // The Token schema is used for authentication codes, access tokens, and
 // refresh tokens.
 type TokenModel struct {
-	ID       string `bson:"_id,omitempty"`
-	ClientID string `bson:"client_id"`
-	UserID   string `bson:"user_id"`
-	Created  int64  `bson:"created"`
-	TTL      int64  `bson:"expireAfterSeconds"`
+	ID        string `bson:"_id,omitempty"`
+	ClientID  string `bson:"client_id"`
+	UserID    string `bson:"user_id"`
+	CreatedAt int64  `bson:"createdAt"`
+	TTL       int64  `bson:"expireAfterSeconds"`
 }
 
 // TokenController defines database operations for the OAuth2 token model.

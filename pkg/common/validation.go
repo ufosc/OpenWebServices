@@ -1,14 +1,18 @@
 package common
 
 import (
+	"fmt"
+	pwd "github.com/wagslane/go-password-validator"
 	"golang.org/x/crypto/bcrypt"
 	"net/mail"
 	"regexp"
-	pwd "github.com/wagslane/go-password-validator"
 )
 
 // ValidateEmail checks whether email is a valid email address.
 func ValidateEmail(email string) bool {
+	if len(email) > 35 {
+		return false
+	}
 	if _, err := mail.ParseAddress(email); err != nil {
 		return false
 	}
@@ -17,6 +21,9 @@ func ValidateEmail(email string) bool {
 
 // ValidatePassword checks whether password is strong enough.
 func ValidatePassword(password string) error {
+	if len(password) > 35 {
+		return fmt.Errorf("password cannot be longer than 35 characters")
+	}
 	return pwd.Validate(password, 60)
 }
 

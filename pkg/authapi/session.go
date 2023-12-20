@@ -37,6 +37,13 @@ func (cntrl *DefaultAPIController) SignUpRoute() gin.HandlerFunc {
 			return
 		}
 
+		if len(req.FirstName) > 20 || len(req.LastName) > 20 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "first and/or last name are too long (> 20 chars)",
+			})
+			return
+		}
+
 		// Validate Email.
 		if !common.ValidateEmail(req.Email) {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -92,7 +99,7 @@ func (cntrl *DefaultAPIController) SignUpRoute() gin.HandlerFunc {
 				LastName:     req.LastName,
 				Realms:       []string{},
 				LastVerified: 0,
-				Created:      0,
+				CreatedAt:    0,
 			},
 			TTL: 600, // 10 minutes.
 		}
@@ -196,7 +203,7 @@ func (cntrl *DefaultAPIController) VerifyEmailRoute() gin.HandlerFunc {
 		}
 
 		// Update user creation dates.
-		pending.User.Created = time.Now().Unix()
+		pending.User.CreatedAt = time.Now().Unix()
 		pending.User.LastVerified = time.Now().Unix()
 
 		// Sign up.
