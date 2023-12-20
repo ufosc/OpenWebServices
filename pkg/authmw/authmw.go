@@ -108,7 +108,7 @@ func AuthenticateClient(secret string, db authdb.Database) gin.HandlerFunc {
 		}
 
 		// Ensure client is not expired.
-		if clientExists.Created+clientExists.TTL < time.Now().Unix() {
+		if clientExists.CreatedAt+clientExists.TTL < time.Now().Unix() {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error": "client lease has expired",
 			})
@@ -129,7 +129,8 @@ func AuthenticateClient(secret string, db authdb.Database) gin.HandlerFunc {
 }
 
 // AuthenticateBearer is a middleware the verifies an access bearer token.
-func AuthenticateBearer(db authdb.Database, scope ...string) gin.HandlerFunc {
+func AuthenticateBearer(secret string, db authdb.Database,
+	scope ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		scopeStr := ""
 		for _, val := range scope {
@@ -157,6 +158,44 @@ func AuthenticateBearer(db authdb.Database, scope ...string) gin.HandlerFunc {
 			return
 		}
 
+		// Check if token is JWT.
+		if claims, ok := common.ValidateJWT(tkStr[1], secret); ok {
+			if claims.Type != "user" {
+				c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
+					"\" error=\"invalid_request\"")
+
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+					"error": "jwt must be of type 'user'",
+				})
+
+				return
+			}
+
+			// Check if subject exists.
+			userExists, err := db.Users().FindByID(claims.Sub)
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+					"error": "user not found",
+				})
+				return
+			}
+
+			// Ensure password hash not changed.
+			if userExists.Password != claims.PKey {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+					"error": "user password has changed",
+				})
+				return
+			}
+
+			c.Set("user", userExists)
+			c.Set("client", authdb.ClientModel{
+				Scope: []string{"email", "public"},
+			})
+
+			return
+		}
+
 		// Verify key exists.
 		tkExists, err := db.Tokens().FindAccessByID(tkStr[1])
 		if err != nil {
@@ -170,7 +209,7 @@ func AuthenticateBearer(db authdb.Database, scope ...string) gin.HandlerFunc {
 		}
 
 		// Ensure key is not expired.
-		if (tkExists.Created + tkExists.TTL) > time.Now().Unix() {
+		if (tkExists.CreatedAt + tkExists.TTL) > time.Now().Unix() {
 			c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
 				"\" error=\"invalid_token\"")
 
@@ -226,7 +265,6 @@ func AuthenticateBearer(db authdb.Database, scope ...string) gin.HandlerFunc {
 		// Write client, user, token to context.
 		c.Set("user", userExists)
 		c.Set("client", clientExists)
-		c.Set("token", tkExists)
 		c.Next()
 	}
 }
