@@ -93,10 +93,10 @@ func (cntrl *DefaultAPIController) AuthorizationRoute() gin.HandlerFunc {
 		// Create implicit token.
 		if client.ResponseType == "token" {
 			token := authdb.TokenModel{
-				ClientID: client.ID,
-				UserID:   user.ID,
-				Created:  time.Now().Unix(),
-				TTL:      1200,
+				ClientID:  client.ID,
+				UserID:    user.ID,
+				CreatedAt: time.Now().Unix(),
+				TTL:       1200,
 			}
 
 			// Save to db.
@@ -118,10 +118,10 @@ func (cntrl *DefaultAPIController) AuthorizationRoute() gin.HandlerFunc {
 
 		// Create authorization code.
 		code := authdb.TokenModel{
-			ClientID: client.ID,
-			UserID:   user.ID,
-			Created:  time.Now().Unix(),
-			TTL:      600,
+			ClientID:  client.ID,
+			UserID:    user.ID,
+			CreatedAt: time.Now().Unix(),
+			TTL:       600,
 		}
 
 		// Save to DB.
@@ -216,7 +216,7 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 	}
 
 	// Ensure code has not expired.
-	if (codeExists.Created + codeExists.TTL) > time.Now().Unix() {
+	if (codeExists.CreatedAt + codeExists.TTL) > time.Now().Unix() {
 		cntrl.db.Tokens().DeleteAuthByID(codeExists.ID)
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error": "Token expired or could not be found",
@@ -263,10 +263,10 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 
 	// Create access token.
 	atoken := authdb.TokenModel{
-		ClientID: client.ID,
-		UserID:   codeExists.UserID,
-		Created:  time.Now().Unix(),
-		TTL:      1200,
+		ClientID:  client.ID,
+		UserID:    codeExists.UserID,
+		CreatedAt: time.Now().Unix(),
+		TTL:       1200,
 	}
 
 	aid, err := cntrl.db.Tokens().CreateAccess(atoken)
@@ -280,10 +280,10 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 
 	// Create refresh token.
 	rtoken := authdb.TokenModel{
-		ClientID: client.ID,
-		UserID:   codeExists.UserID,
-		Created:  time.Now().Unix(),
-		TTL:      5256000,
+		ClientID:  client.ID,
+		UserID:    codeExists.UserID,
+		CreatedAt: time.Now().Unix(),
+		TTL:       5256000,
 	}
 
 	rid, err := cntrl.db.Tokens().CreateRefresh(rtoken)
@@ -355,7 +355,7 @@ func (cntrl *DefaultAPIController) handleRefreshToken(c *gin.Context) {
 	}
 
 	// Ensure token is not expired.
-	if (token.Created + token.TTL) > time.Now().Unix() {
+	if (token.CreatedAt + token.TTL) > time.Now().Unix() {
 		cntrl.db.Tokens().DeleteRefreshByID(token.ID)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Refresh token expired or could not be found",
@@ -383,10 +383,10 @@ func (cntrl *DefaultAPIController) handleRefreshToken(c *gin.Context) {
 
 	// Create new access token.
 	atoken := authdb.TokenModel{
-		ClientID: client.ID,
-		UserID:   token.UserID,
-		Created:  time.Now().Unix(),
-		TTL:      1200,
+		ClientID:  client.ID,
+		UserID:    token.UserID,
+		CreatedAt: time.Now().Unix(),
+		TTL:       1200,
 	}
 
 	// Save new access token to db.

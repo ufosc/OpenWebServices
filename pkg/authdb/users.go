@@ -16,7 +16,7 @@ type UserModel struct {
 	LastName     string   `bson:"last_name"`
 	Realms       []string `bson:"realms"`
 	LastVerified int64    `bson:"last_verified"`
-	Created      int64    `bson:"created"`
+	CreatedAt    int64    `bson:"createdAt"`
 }
 
 // PendingUserModel is a sign up request that is awaiting email

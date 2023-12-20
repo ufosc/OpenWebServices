@@ -16,7 +16,7 @@ type ClientModel struct {
 	Scope        []string `bson:"scope"`
 	Owner        string   `bson:"owner"`
 	Key          string   `bson:"key"`
-	Created      int64    `bson:"created"`
+	CreatedAt    int64    `bson:"createdAt"`
 	TTL          int64    `bson:"expireAfterSeconds"`
 }
 
