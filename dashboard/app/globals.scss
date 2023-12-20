@@ -15,3 +15,12 @@
     letter-spacing: 0;
     color: #161616;
 }
+
+.account {
+    height: calc(100vh - 48px - 32px - 32px);
+    width: calc(100vw - 32px - 32px);
+}
+
+.account--tablist {
+    margin-top: 20px;
+}
