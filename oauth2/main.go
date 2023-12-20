@@ -40,14 +40,19 @@ func main() {
 	r.POST("/auth/signin", api.SignInRoute())
 	r.GET("/auth/verify/:ref", api.VerifyEmailRoute())
 	r.POST("/auth/client", api.AuthClientRoute())
-	r.GET("/auth/authorize", authmw.AuthenticateUser(config.SECRET,
-		api.DB()),api.AuthorizationRoute())
-
 	r.GET("/auth/token", api.TokenRoute())
 
+	r.GET("/auth/authorize", authmw.AuthenticateUser(config.SECRET,
+		api.DB()), api.AuthorizationRoute())
+
 	// Resource API.
-	r.GET("/user", authmw.AuthenticateBearer(api.DB()), api.GetUserRoute())
 	r.GET("/client/:id", api.GetClientRoute())
+
+	r.GET("/user", authmw.AuthenticateBearer(config.SECRET, api.DB()),
+		api.GetUserRoute())
+
+	r.PUT("/user", authmw.AuthenticateBearer(config.SECRET, api.DB()),
+		api.UpdateUserRoute())
 
 	r.POST("/client", authmw.AuthenticateUser(config.SECRET, api.DB(),
 		"client.create"), api.CreateClientRoute())

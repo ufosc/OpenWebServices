@@ -63,10 +63,12 @@ func (cntrl *DefaultAPIController) GetUserRoute() gin.HandlerFunc {
 
 		if hasEmailScope {
 			c.JSON(http.StatusOK, gin.H{
+				"message":    "success",
 				"user_id":    user.ID,
 				"email":      user.Email,
 				"first_name": user.FirstName,
 				"last_name":  user.LastName,
+				"realms":     user.Realms,
 			})
 			return
 		}
@@ -84,8 +86,65 @@ func (cntrl *DefaultAPIController) GetUserRoute() gin.HandlerFunc {
 // UpdateUserRoute updates user information.
 func (cntrl *DefaultAPIController) UpdateUserRoute() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{
-			"error": "not implemented",
+
+		// Get user.
+		userAny, ok := c.Get("user")
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "User not found",
+			})
+			return
+		}
+
+		user, ok := userAny.(authdb.UserModel)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "User not found",
+			})
+			return
+		}
+
+		var req struct {
+			FirstName string `json:"first_name" binding:"required"`
+			LastName  string `json:"last_name" binding:"required"`
+		}
+
+		// Extract JSON body.
+		if err := c.BindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Missing required fields",
+			})
+			return
+		}
+
+		if len(req.FirstName) > 20 || len(req.LastName) > 20 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "first and/or last name are too long (> 20 chars)",
+			})
+			return
+		}
+
+		if len(req.FirstName) < 2 || len(req.LastName) < 2 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "first and/or last name are too short",
+			})
+			return
+		}
+
+		user.FirstName = req.FirstName
+		user.LastName = req.LastName
+		if _, err := cntrl.db.Users().Update(user); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "an error occurred. please try again later",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message":    "success",
+			"user_id":    user.ID,
+			"first_name": user.FirstName,
+			"last_name":  user.LastName,
 		})
 	}
 }
@@ -258,7 +317,7 @@ func (cntrl *DefaultAPIController) CreateClientRoute() gin.HandlerFunc {
 			Scope:        req.Scope,
 			Owner:        user.ID,
 			Key:          string(pkeyHash),
-			Created:      time.Now().Unix(),
+			CreatedAt:    time.Now().Unix(),
 			TTL:          7890000, // 3 months.
 		}
 
