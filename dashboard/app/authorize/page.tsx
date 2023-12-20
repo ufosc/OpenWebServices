@@ -160,9 +160,9 @@ export default function Page() {
       return (<SignupForm setView={setView} />)
     }
 
-    // No URL parameters and user is already signed in, redirect to account page.
+    // No URL parameters and user is already signed in, redirect to dashboard.
     if (typeof jwt !== "undefined" && client.response_type === null) {
-      redirect("/account")
+      redirect("/")
       return null
     }
 

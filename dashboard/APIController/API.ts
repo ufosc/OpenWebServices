@@ -63,6 +63,24 @@ export const GetUser = (jwt : string) => {
   })
 }
 
+export const UpdateUser = (firstName : string, lastName : string,
+  jwt : string) => {
+  return new Promise((resolve: Function, reject: Function) => {
+    axios.put('/user', { first_name: firstName, last_name: lastName },
+      { headers: { 'Authorization': `Bearer ${jwt}` }})
+      .then((res : AxiosResponse) => {
+	resolve(res.data)
+      })
+      .catch((err : AxiosError) => {
+	if (err.response && IsAPIFailure(err.response.data)) {
+	  resolve(err.response.data)
+	  return
+	}
+	reject(err)
+      })
+  })
+}
+
 export function IsAPISuccess(obj : any): obj is APIResponse {
   return typeof (obj as APIResponse).message !== 'undefined'
 }

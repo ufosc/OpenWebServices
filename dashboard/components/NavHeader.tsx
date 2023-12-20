@@ -44,9 +44,6 @@ const NavHeader = (props : { setTheme: Function }) => {
 	  {
 	    (typeof jwt !== "undefined") ? (
 	      <>
-		<HeaderGlobalAction aria-label="Account" tooltipAlignment="center">
-		  <UserAvatar size={20} onClick={() => location.replace("/account")}/>
-		</HeaderGlobalAction>
 		<HeaderGlobalAction aria-label="Logout" tooltipAlignment="center"
 		  onClick={onSignout}>
 		  <Logout size={20} />
