@@ -48,14 +48,20 @@ func main() {
 	// Resource API.
 	r.GET("/client/:id", api.GetClientRoute())
 
-	r.GET("/user", authmw.AuthenticateBearer(config.SECRET, api.DB()),
-		api.GetUserRoute())
+	r.GET("/user", authmw.AuthenticateBearer(config.SECRET, api.DB(),
+		[]string{}, []string{}), api.GetUserRoute())
 
-	r.PUT("/user", authmw.AuthenticateBearer(config.SECRET, api.DB()),
-		api.UpdateUserRoute())
+	r.PUT("/user", authmw.AuthenticateBearer(config.SECRET, api.DB(),
+		[]string{}, []string{"modify"}), api.UpdateUserRoute())
+
+	r.GET("/users", authmw.AuthenticateBearer(config.SECRET, api.DB(),
+		[]string{"users.read"}, []string{}), api.GetUsersRoute())
 
 	r.POST("/client", authmw.AuthenticateUser(config.SECRET, api.DB(),
 		"client.create"), api.CreateClientRoute())
+
+	r.GET("/clients", authmw.AuthenticateBearer(config.SECRET, api.DB(),
+		[]string{"clients.read"}, []string{}), api.GetClientsRoute())
 
 	r.DELETE("/client/:id", authmw.AuthenticateUser(config.SECRET, api.DB()),
 		api.DeleteClientRoute())

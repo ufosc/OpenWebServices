@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -154,6 +155,44 @@ func (cntrl *DefaultAPIController) ResetPwdRoute() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.JSON(http.StatusNotImplemented, gin.H{
 			"error": "not implemented",
+		})
+	}
+}
+
+// GetUsersRoute returns the batch of 20 users determined by the page
+// URL parameter.
+func (cntrl *DefaultAPIController) GetUsersRoute() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		page := c.DefaultQuery("page", "0")
+		pagei, err := strconv.ParseInt(page, 10, 64)
+		if err != nil || pagei < 0 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "page must be >= 0",
+			})
+			return
+		}
+
+		docs, err := cntrl.db.Users().Batch(20, pagei*20)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to fetch documents from server",
+			})
+			return
+		}
+
+		count, err := cntrl.db.Users().Count()
+		if err != nil || count < 1 {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to fetch documents from server",
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message":     "success",
+			"count":       20,
+			"total_count": count,
+			"users":       docs,
 		})
 	}
 }
@@ -382,6 +421,44 @@ func (cntrl *DefaultAPIController) DeleteClientRoute() gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, gin.H{
 			"message": "client deleted successfully",
+		})
+	}
+}
+
+// GetClientsRoute returns the batch of 20 clients determined by the page
+// URL parameter.
+func (cntrl *DefaultAPIController) GetClientsRoute() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		page := c.DefaultQuery("page", "0")
+		pagei, err := strconv.ParseInt(page, 10, 64)
+		if err != nil || pagei < 0 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "page must be >= 0",
+			})
+			return
+		}
+
+		docs, err := cntrl.db.Clients().Batch(20, pagei*20)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to fetch documents from server",
+			})
+			return
+		}
+
+		count, err := cntrl.db.Clients().Count()
+		if err != nil || count < 1 {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to fetch documents from server",
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message":     "success",
+			"count":       20,
+			"total_count": count,
+			"clients":     docs,
 		})
 	}
 }

@@ -18,10 +18,13 @@ type APIController interface {
 
 	GetUserRoute() gin.HandlerFunc
 	UpdateUserRoute() gin.HandlerFunc
-	GetClientRoute() gin.HandlerFunc
+	GetUsersRoute() gin.HandlerFunc
 	ResetPwdRoute() gin.HandlerFunc
+
+	GetClientRoute() gin.HandlerFunc
 	CreateClientRoute() gin.HandlerFunc
 	DeleteClientRoute() gin.HandlerFunc
+	GetClientsRoute() gin.HandlerFunc
 
 	DB() authdb.Database
 	Stop() error
