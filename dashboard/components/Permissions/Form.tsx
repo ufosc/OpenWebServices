@@ -4,7 +4,7 @@ import './style.scss'
 import { ArrowRight, Wikis } from '@carbon/icons-react'
 import { useTheme, Button, Form, Heading, Accordion, AccordionItem } from '@carbon/react'
 import { TypeAuthGrant } from '@/APIController/types'
-import { PublicScope, EmailScope } from './scopes'
+import { PublicScope, EmailScope, ModifyScope } from './scopes'
 import { useCookies } from 'next-client-cookies'
 
 const PermissionsForm = (props: { client: TypeAuthGrant, state: string }) => {
@@ -41,6 +41,7 @@ const PermissionsForm = (props: { client: TypeAuthGrant, state: string }) => {
 	</AccordionItem>
 	{ (!props.client.scope?.includes("public")) ? null : (<PublicScope />) }
 	{ (!props.client.scope?.includes("email")) ? null : (<EmailScope />) }
+	{ (!props.client.scope?.includes("modify")) ? null : (<ModifyScope />) }
       </Accordion>
       <p style={{ marginBottom: "20px" }}>Your password will never be shared</p>
       <Button className="perm-button" onClick={onAccept}>
