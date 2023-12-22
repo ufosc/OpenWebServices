@@ -129,17 +129,23 @@ func AuthenticateClient(secret string, db authdb.Database) gin.HandlerFunc {
 }
 
 // AuthenticateBearer is a middleware the verifies an access bearer token.
-func AuthenticateBearer(secret string, db authdb.Database,
-	scope ...string) gin.HandlerFunc {
+func AuthenticateBearer(secret string, db authdb.Database, realms,
+	scope []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		scopeStr := ""
 		for _, val := range scope {
-			scopeStr += val
+			scopeStr += val + " "
+		}
+
+		realmStr := ""
+		for _, val := range realms {
+			realmStr = val + " "
 		}
 
 		tkStr := strings.Split(c.GetHeader("Authorization"), " ")
 		if len(tkStr) < 2 {
 			c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
+				"\" realms=\""+realmStr+
 				"\" error=\"invalid_request\"")
 
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
@@ -150,6 +156,7 @@ func AuthenticateBearer(secret string, db authdb.Database,
 
 		if tkStr[0] != "Bearer" {
 			c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
+				"\" realms=\""+realmStr+
 				"\" error=\"invalid_request\"")
 
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
@@ -162,6 +169,7 @@ func AuthenticateBearer(secret string, db authdb.Database,
 		if claims, ok := common.ValidateJWT(tkStr[1], secret); ok {
 			if claims.Type != "user" {
 				c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
+					"\" realms=\""+realmStr+
 					"\" error=\"invalid_request\"")
 
 				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
@@ -174,6 +182,10 @@ func AuthenticateBearer(secret string, db authdb.Database,
 			// Check if subject exists.
 			userExists, err := db.Users().FindByID(claims.Sub)
 			if err != nil {
+				c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
+					"\" realms=\""+realmStr+
+					"\" error=\"invalid_request\"")
+
 				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 					"error": "user not found",
 				})
@@ -182,15 +194,39 @@ func AuthenticateBearer(secret string, db authdb.Database,
 
 			// Ensure password hash not changed.
 			if userExists.Password != claims.PKey {
+				c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
+					"\" realms=\""+realmStr+
+					"\" error=\"invalid_request\"")
+
 				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 					"error": "user password has changed",
 				})
 				return
 			}
 
+			// Ensure user has required realms.
+			haveRealms := map[string]bool{}
+			for _, realm := range userExists.Realms {
+				haveRealms[realm] = true
+			}
+
+			for _, realm := range realms {
+				if !haveRealms[realm] {
+					c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
+						"\" realms=\""+realmStr+
+						"\" error=\"insufficient_scope\"")
+
+					c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+						"error": "insufficient realm permissions",
+					})
+
+					return
+				}
+			}
+
 			c.Set("user", userExists)
 			c.Set("client", authdb.ClientModel{
-				Scope: []string{"email", "public"},
+				Scope: []string{"email", "public", "modify"},
 			})
 
 			return
@@ -200,6 +236,7 @@ func AuthenticateBearer(secret string, db authdb.Database,
 		tkExists, err := db.Tokens().FindAccessByID(tkStr[1])
 		if err != nil {
 			c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
+				"\" realms=\""+realmStr+
 				"\" error=\"invalid_token\"")
 
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
@@ -209,8 +246,9 @@ func AuthenticateBearer(secret string, db authdb.Database,
 		}
 
 		// Ensure key is not expired.
-		if (tkExists.CreatedAt + tkExists.TTL) > time.Now().Unix() {
+		if (tkExists.CreatedAt + tkExists.TTL) < time.Now().Unix() {
 			c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
+				"\" realms=\""+realmStr+
 				"\" error=\"invalid_token\"")
 
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
@@ -223,6 +261,7 @@ func AuthenticateBearer(secret string, db authdb.Database,
 		userExists, err := db.Users().FindByID(tkExists.UserID)
 		if err != nil {
 			c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
+				"\" realms=\""+realmStr+
 				"\" error=\"invalid_token\"")
 
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
@@ -231,10 +270,31 @@ func AuthenticateBearer(secret string, db authdb.Database,
 			return
 		}
 
+		// Verify user has required realms.
+		haveRealms := map[string]bool{}
+		for _, realm := range userExists.Realms {
+			haveRealms[realm] = true
+		}
+
+		for _, realm := range realms {
+			if !haveRealms[realm] {
+				c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
+					"\" realms=\""+realmStr+
+					"\" error=\"insufficient_scope\"")
+
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+					"error": "insufficient realm permissions",
+				})
+
+				return
+			}
+		}
+
 		// Verify associated client exists.
 		clientExists, err := db.Clients().FindByID(tkExists.ClientID)
 		if err != nil {
 			c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
+				"\" realms=\""+realmStr+
 				"\" error=\"invalid_token\"")
 
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
@@ -252,6 +312,7 @@ func AuthenticateBearer(secret string, db authdb.Database,
 		for _, value := range scope {
 			if !haveScope[value] {
 				c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
+					"\" realms=\""+realmStr+
 					"\" error=\"insufficient_scope\"")
 
 				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
