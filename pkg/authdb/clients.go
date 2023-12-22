@@ -4,6 +4,7 @@ import (
 	"context"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // ClientModel is the client schema.
@@ -26,6 +27,8 @@ type ClientController interface {
 	FindByName(string) (ClientModel, error)
 	Create(ClientModel) (string, error)
 	DeleteByID(string) error
+	Batch(n, skip int64) ([]ClientModel, error)
+	Count() (int64, error)
 }
 
 // MongoClientController implements ClientController using MongoDB.
@@ -128,4 +131,42 @@ func (cc *MongoClientController) DeleteByID(id string) error {
 
 	_, err = cc.coll.DeleteOne(context.TODO(), bson.D{{Key: "_id", Value: objID}})
 	return err
+}
+
+func (cc *MongoClientController) Batch(n, skip int64) ([]ClientModel, error) {
+	if cc.state == nil || cc.state.Stopped.Load() || cc.coll == nil {
+		return []ClientModel{}, ErrClosed
+	}
+
+	cc.state.Wg.Add(1)
+	defer cc.state.Wg.Done()
+	cursor, err := cc.coll.Find(context.TODO(), bson.D{},
+		options.Find().SetLimit(n).SetSkip(skip))
+
+	if err != nil {
+		return []ClientModel{}, err
+	}
+
+	result := []ClientModel{}
+	if err := cursor.All(context.TODO(), &result); err != nil {
+		return []ClientModel{}, err
+	}
+
+	return result, nil
+}
+
+func (cc *MongoClientController) Count() (int64, error) {
+	if cc.state == nil || cc.state.Stopped.Load() || cc.coll == nil {
+		return -1, ErrClosed
+	}
+
+	cc.state.Wg.Add(1)
+	defer cc.state.Wg.Done()
+
+	count, err := cc.coll.CountDocuments(context.TODO(), bson.D{})
+	if err != nil {
+		return -1, err
+	}
+
+	return count, nil
 }

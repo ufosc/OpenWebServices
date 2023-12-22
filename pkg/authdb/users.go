@@ -5,6 +5,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // UserModel is the user schema.
@@ -36,6 +37,8 @@ type UserController interface {
 	FindByID(string) (UserModel, error)
 	Update(UserModel) (int64, error)
 	Create(UserModel) (string, error)
+	Batch(n, skip int64) ([]UserModel, error)
+	Count() (int64, error)
 
 	// Pending users.
 	FindPendingByID(string) (PendingUserModel, error)
@@ -157,6 +160,46 @@ func (cc *MongoUserController) Create(usr UserModel) (string, error) {
 	}
 
 	return res.InsertedID.(primitive.ObjectID).Hex(), nil
+}
+
+// Page returns users in batches, with each p >= 0 returning the subsequent batch of 20 users.
+func (cc *MongoUserController) Batch(n, skip int64) ([]UserModel, error) {
+	if cc.state == nil || cc.state.Stopped.Load() || cc.ccoll == nil {
+		return []UserModel{}, ErrClosed
+	}
+
+	cc.state.Wg.Add(1)
+	defer cc.state.Wg.Done()
+	cursor, err := cc.ccoll.Find(context.TODO(), bson.D{},
+		options.Find().SetLimit(n).SetSkip(skip))
+
+	if err != nil {
+		return []UserModel{}, err
+	}
+
+	result := []UserModel{}
+	if err := cursor.All(context.TODO(), &result); err != nil {
+		return []UserModel{}, err
+	}
+
+	return result, nil
+}
+
+// Count returns the number of documents in the collection.
+func (cc *MongoUserController) Count() (int64, error) {
+	if cc.state == nil || cc.state.Stopped.Load() || cc.ccoll == nil {
+		return -1, ErrClosed
+	}
+
+	cc.state.Wg.Add(1)
+	defer cc.state.Wg.Done()
+
+	count, err := cc.ccoll.CountDocuments(context.TODO(), bson.D{})
+	if err != nil {
+		return -1, err
+	}
+
+	return count, nil
 }
 
 // Pending users.
