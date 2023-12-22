@@ -1,30 +1,39 @@
-module github.com/ufosc/OpenWebServices
+module github.com/ufosc/OpenWebServices/pkg/authapi
 
 go 1.20
 
+replace github.com/ufosc/OpenWebServices/pkg/authdb => ../authdb
+
+replace github.com/ufosc/OpenWebServices/pkg/authmw => ../authmw
+
+replace github.com/ufosc/OpenWebServices/pkg/common => ../common
+
+replace github.com/ufosc/OpenWebServices/pkg/websmtp => ../websmtp
+
 require (
-	github.com/emersion/go-smtp v0.18.1
-	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-gonic/gin v1.9.1
-	github.com/golang-jwt/jwt/v5 v5.0.0
-	github.com/google/uuid v1.3.1
-	github.com/joho/godotenv v1.5.1
-	github.com/wagslane/go-password-validator v0.3.0
-	go.mongodb.org/mongo-driver v1.12.1
-	golang.org/x/crypto v0.14.0
+	github.com/ufosc/OpenWebServices/pkg/authdb v0.0.0-00010101000000-000000000000
+	github.com/ufosc/OpenWebServices/pkg/authmw v0.0.0-00010101000000-000000000000
+	github.com/ufosc/OpenWebServices/pkg/common v0.0.0-00010101000000-000000000000
+	github.com/ufosc/OpenWebServices/pkg/websmtp v0.0.0-00010101000000-000000000000
+	go.mongodb.org/mongo-driver v1.13.1
+	golang.org/x/crypto v0.17.0
 )
 
 require (
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21 // indirect
+	github.com/emersion/go-smtp v0.19.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.14.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
+	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
+	github.com/google/uuid v1.5.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
@@ -36,6 +45,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
+	github.com/wagslane/go-password-validator v0.3.0 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
@@ -43,8 +53,8 @@ require (
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
-	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
