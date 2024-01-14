@@ -1,0 +1,73 @@
+9apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: osc-website
+  labels:
+    app: osc-website
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: osc-website
+  template:
+    metadata:
+      labels:
+        app: osc-website
+    spec:
+      containers:
+        - name: club-website
+          #image: osc-website
+          image: us-central1-docker.pkg.dev/innate-concept-409007/docker-repo/club-website:v1.0.1
+          #imagePullPolicy: Never
+          env:
+            - name: MONGO_URI
+              value: "mongodb://mongodb-service.default.svc.cluster.local:27017"
+            - name: NODE_ENV
+              value: "production"
+            - name: RATE_LIMIT_MAX
+              value: "150"
+            - name: RATE_LIMIT_TIMEOUT
+              value: "1"
+            - name: SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: osc-website-secrets
+                  key: secret
+            - name: SMTP_USER
+              valueFrom:
+                secretKeyRef:
+                  name: osc-website-secrets
+                  key: smtp-user
+            - name: SMTP_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: osc-website-secrets
+                  key: smtp-pass
+            - name: ADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: osc-website-secrets
+                  key: email
+            - name: CACHE_INTERVAL
+              value: "60"
+            - name: CAPTCHA_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: osc-website-secrets
+                  key: captcha
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: osc-website-service
+  labels:
+    app: osc-website
+spec:
+  #type: NodePort
+  selector:
+    app: osc-website
+  ports:
+    - protocol: TCP
+      port: 3002
+      targetPort: 3002
+      #nodePort: 30000
