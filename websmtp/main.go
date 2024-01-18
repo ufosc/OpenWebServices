@@ -4,13 +4,21 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ufosc/OpenWebServices/pkg/websmtp"
 	"net/http"
+	"strconv"
 )
 
-// TODO: Currently, the purpose of this program is to provide a mechanism for
-// sending email verification emails. Authentication should eventually be
-// implemented, but otherwise this is sufficient as a demo.
 func main() {
 	send := websmtp.NewSender()
+	config := GetConfig()
+
+	// Decode thread number.
+	threads, err := strconv.ParseInt(config.THREADS, 10, 32)
+	if err != nil {
+		panic("Invalid Thread Number")
+	}
+
+	// Set server mode ("debug" or "release").
+	gin.SetMode(config.GIN_MODE)
 	r := gin.Default()
 
 	r.POST("/mail/send", func(c *gin.Context) {
@@ -32,6 +40,7 @@ func main() {
 		c.JSON(http.StatusOK, send.GetStatus(id))
 	})
 
-	send.Start(1)
-	r.Run()
+	send.Start(int(threads))
+	defer send.Stop()
+	r.Run("0.0.0.0:" + config.PORT)
 }
