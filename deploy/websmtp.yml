@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: websmtp
+  labels:
+    app: websmtp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: websmtp
+  template:
+    metadata:
+      labels:
+        app: websmtp
+    spec:
+      containers:
+        - name: websmtp
+          #image: websmtp
+          #imagePullPolicy: Never
+          image: us-central1-docker.pkg.dev/innate-concept-409007/docker-repo/websmtp:v0.0.1
+          env:
+            - name: GIN_MODE
+              value: "release"
+            - name: PORT
+              value: "8080"
+            - name: THREADS
+              value: "1"
+            - name: SMTP_PORT
+              value: "587"
+            - name: SMTP_SERVER
+              valueFrom:
+                secretKeyRef:
+                  name: websmtp-secrets
+                  key: smtp-server
+            - name: SMTP_USER
+              valueFrom:
+                secretKeyRef:
+                  name: websmtp-secrets
+                  key: smtp-user
+            - name: SMTP_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: websmtp-secrets
+                  key: smtp-pwd
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: websmtp-service
+spec:
+  selector:
+    app: websmtp
+  ports:
+    - protocol: TCP
+      port: 3001
+      targetPort: 8080
