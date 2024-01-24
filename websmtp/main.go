@@ -8,8 +8,27 @@ import (
 )
 
 func main() {
-	send := websmtp.NewSender()
+	var send *websmtp.Sender
 	config := GetConfig()
+
+	// Decode port number.
+	port, err := strconv.ParseInt(config.SMTP_PORT, 10, 32)
+	if err != nil {
+		panic("Invalid outbound port number")
+	}
+
+	if config.SMTP_SERVER != "" {
+		send = websmtp.NewSenderRelay(int(port),
+			&websmtp.RelayConfig{
+				Host:      config.SMTP_SERVER,
+				Port:      int(port),
+				Username:  config.SMTP_USER,
+				Password:  config.SMTP_PWD,
+				UseSecure: false,
+			})
+	} else {
+		send = websmtp.NewSender(int(port))
+	}
 
 	// Decode thread number.
 	threads, err := strconv.ParseInt(config.THREADS, 10, 32)
