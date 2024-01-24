@@ -17,20 +17,31 @@ type sendObj struct {
 // Sender maintains a queue of send requests and their status, and attempts to
 // process them.
 type Sender struct {
-	sendQueue []sendObj
-	status    map[string]SendStatus
-	started   bool
-	mutex     sync.Mutex
-	wg        sync.WaitGroup
-	ch        chan struct{}
+	sendQueue   []sendObj
+	status      map[string]SendStatus
+	port        int
+	relayConfig *RelayConfig
+	started     bool
+	mutex       sync.Mutex
+	wg          sync.WaitGroup
+	ch          chan struct{}
 }
 
 // NewSender initializes a new sender.
-func NewSender() *Sender {
+func NewSender(port int) *Sender {
 	sender := new(Sender)
 	sender.sendQueue = []sendObj{}
 	sender.status = map[string]SendStatus{}
 	sender.started = false
+	sender.relayConfig = nil
+	sender.port = port
+	return sender
+}
+
+// NewSenderRelay initializes a new sender that sends via SMTP relay.
+func NewSenderRelay(port int, relay *RelayConfig) *Sender {
+	sender := NewSender(port)
+	sender.relayConfig = relay
 	return sender
 }
 
@@ -66,7 +77,12 @@ func (s *Sender) GetStatus(ref string) SendStatus {
 // sendMail fulfills the sendRequest in the given entry and updates the
 // request's status.
 func (s *Sender) sendMail(entry sendObj) {
-	status := SendMail(entry.ID, entry.Req)
+	var status SendStatus
+	if s.relayConfig != nil {
+		status = SendMailWithRelay(entry.ID, entry.Req, *s.relayConfig)
+	} else {
+		status = SendMail(entry.ID, entry.Req, s.port)
+	}
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	s.status[entry.ID] = status

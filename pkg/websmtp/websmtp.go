@@ -2,11 +2,13 @@ package websmtp
 
 import (
 	"fmt"
+	"github.com/emersion/go-sasl"
 	"github.com/emersion/go-smtp"
 	"github.com/google/uuid"
 	"io"
 	"net"
 	"net/mail"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -15,6 +17,9 @@ import (
 // hostCache caches MX records in memory to speed up looking for email hosts.
 var hostCache = map[string]string{}
 var cacheMutex sync.Mutex
+
+// DefaultPort is the default outbound SMTP port.
+var DefaultPort int = 25
 
 // SendRequest is a request to send an email to the specified 'to' addresses.
 type SendRequest struct {
@@ -31,6 +36,17 @@ type SendStatus struct {
 	Status        string   `json:"status" binding:"required"` // Request status.
 	Failed        []string `json:"failed" binding:"required"` // List of addresses that couldn't be reached.
 	TimeCompleted int64    `json:"time_completed"`            // Timestamp at SendRequest completion.
+}
+
+// RelayConfig encapsulates the connection details for an SMTP relay node. This is
+// for situations where a hosting provider blocks port 25, but you're still interested
+// in using WebSMTP.
+type RelayConfig struct {
+	Host      string // The SMTP host address.
+	Port      int    // The SMTP server port.
+	Username  string // The server username.
+	Password  string // The server password.
+	UseSecure bool   // Whether to use TLS.
 }
 
 // FindHost looks for an email address' SMTP host by looking up DNS records and
@@ -56,7 +72,7 @@ func FindHost(addr string) string {
 		return ""
 	}
 
-	res := mxrecords[0].Host + ":25"
+	res := mxrecords[0].Host
 	cacheMutex.Lock()
 	defer cacheMutex.Unlock()
 	hostCache[domain[1]] = res
@@ -66,10 +82,10 @@ func FindHost(addr string) string {
 // SendMail fulfills the SendRequest. This might take a while to complete if
 // you specify too many email addresses. If you need immediate responses, use
 // Sender struct instead.
-func SendMail(id string, req SendRequest) SendStatus {
+func SendMail(id string, req SendRequest, port int) SendStatus {
 	failed := []string{}
 	for _, dest := range req.To {
-		host := FindHost(dest)
+		host := FindHost(dest) + ":" + strconv.FormatInt(int64(port), 10)
 		if host == "" {
 			failed = append(failed, dest)
 			continue
@@ -80,8 +96,38 @@ func SendMail(id string, req SendRequest) SendStatus {
 		if err := smtp.SendMail(host, nil, req.From, []string{dest},
 			getData(eid, dest, req.From, req)); err != nil {
 			failed = append(failed, dest)
+			fmt.Println(err)
 		}
 	}
+	return SendStatus{id, "completed", failed, time.Now().Unix()}
+}
+
+// SendMailWithRelay fulfills the SendRequest via a different SMTP relay.
+func SendMailWithRelay(id string, req SendRequest, c RelayConfig) SendStatus {
+	failed := []string{}
+	host := c.Host + ":" + strconv.FormatInt(int64(c.Port), 10)
+	eid := uuid.New().String()
+	msg := getData(eid, req.From, req.From, req)
+
+	var client sasl.Client
+	if c.Username != "" {
+		client = sasl.NewLoginClient(c.Username, c.Password)
+	}
+
+	if c.UseSecure {
+		if err := smtp.SendMailTLS(host, client, req.From,
+			req.To, msg); err != nil {
+			failed = req.To
+			fmt.Println(err)
+		}
+		return SendStatus{id, "completed", failed, time.Now().Unix()}
+	}
+
+	if err := smtp.SendMail(host, client, req.From, req.To, msg); err != nil {
+		failed = req.To
+		fmt.Println(err)
+	}
+
 	return SendStatus{id, "completed", failed, time.Now().Unix()}
 }
 

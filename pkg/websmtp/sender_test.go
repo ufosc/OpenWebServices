@@ -7,7 +7,7 @@ import (
 )
 
 func TestSenderClear(t *testing.T) {
-	sender := NewSender()
+	sender := NewSender(25)
 	ref := sender.Enqueue(SendRequest{
 		"source@example.com",
 		[]string{"bar@example.com"},
@@ -34,7 +34,7 @@ func TestSenderClear(t *testing.T) {
 }
 
 func TestSenderClearConcurrency(t *testing.T) {
-	sender := NewSender()
+	sender := NewSender(25)
 	signalChan := make(chan struct{})
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
@@ -50,7 +50,7 @@ func TestSenderClearConcurrency(t *testing.T) {
 }
 
 func TestSenderEnqueue(t *testing.T) {
-	sender := NewSender()
+	sender := NewSender(25)
 	if ref := sender.Enqueue(SendRequest{"bad_example",
 		[]string{"myself@example.com"}, "foo bar",
 		"hello world"}); ref != "" {
@@ -74,7 +74,7 @@ func TestSenderEnqueue(t *testing.T) {
 }
 
 func TestSenderEnqueueConcurrency(t *testing.T) {
-	sender := NewSender()
+	sender := NewSender(25)
 	signalChan := make(chan struct{})
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
@@ -90,7 +90,7 @@ func TestSenderEnqueueConcurrency(t *testing.T) {
 }
 
 func BenchmarkSenderEnqueue(b *testing.B) {
-	sender := NewSender()
+	sender := NewSender(25)
 	req := SendRequest{"from@example.com", []string{"to@example.com"},
 		"subject", "body"}
 
@@ -101,7 +101,7 @@ func BenchmarkSenderEnqueue(b *testing.B) {
 }
 
 func TestSenderStartStop(t *testing.T) {
-	sender := NewSender()
+	sender := NewSender(25)
 	err := sender.Start(3)
 	if err != nil {
 		t.Error(err)
@@ -133,7 +133,7 @@ func TestSenderStartStop(t *testing.T) {
 }
 
 func BenchmarkSenderStartStop(b *testing.B) {
-	sender := NewSender()
+	sender := NewSender(25)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		sender.Start(5)

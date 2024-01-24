@@ -28,7 +28,7 @@ func genRandEmail() string {
 func TestFindHost(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		email := genRandEmail()
-		host := FindHost(email)
+		host := FindHost(email) + ":25"
 		if host == "" {
 			t.Fatalf("failed to find host %s", email)
 		}
