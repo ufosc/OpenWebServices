@@ -11,7 +11,7 @@ type MailSender struct {
 // NewMailSender creates a new MailSender with the given config.
 func NewMailSender(addr string) MailSender {
 	return MailSender{
-		websmtp.NewSender(),
+		websmtp.NewSender(25),
 		addr,
 	}
 }
