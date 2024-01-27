@@ -59,6 +59,11 @@ func main() {
 		c.JSON(http.StatusOK, send.GetStatus(id))
 	})
 
+	// Status check.
+	r.GET("/status", func(c *gin.Context) {
+		c.JSON(http.StatusOK, "ok")
+	})
+
 	send.Start(int(threads))
 	defer send.Stop()
 	r.Run("0.0.0.0:" + config.PORT)
