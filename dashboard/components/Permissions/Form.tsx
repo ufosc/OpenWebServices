@@ -6,8 +6,9 @@ import { useTheme, Button, Form, Heading, Accordion, AccordionItem } from '@carb
 import { TypeAuthGrant } from '@/APIController/types'
 import { PublicScope, EmailScope, ModifyScope } from './scopes'
 import { useCookies } from 'next-client-cookies'
+import { redirect } from 'next/navigation'
 
-const PermissionsForm = (props: { client: TypeAuthGrant, state: string }) => {
+const PermissionsForm = (props: { client: any, state: string }) => {
   const cookies = useCookies()
 
   const headingColor = () => {
@@ -16,13 +17,19 @@ const PermissionsForm = (props: { client: TypeAuthGrant, state: string }) => {
   }
 
   const onAccept = () => {
-    location.replace(`/auth/authorize?response_type=${props.client.response_type}` +
+    if (typeof window === "undefined") {
+      return
+    }
+    window.location.replace(`https://api.testing.ufosc.org/auth/authorize?response_type=${props.client.response_type}` +
       `&client_id=${props.client.id}&redirect_uri=${encodeURIComponent(props.client.redirect_uri)}` +
       `&state=${props.state}&assertion=${cookies.get('ows-jwt')}`)
   }
 
   const onReject = () => {
-    location.replace("/authorize")
+    if (typeof window === "undefined") {
+      return
+    }
+    window.location.replace("/")
   }
 
   return (
@@ -35,7 +42,7 @@ const PermissionsForm = (props: { client: TypeAuthGrant, state: string }) => {
 	You are attempting to sign-in to '{props.client.name}' using your Open Source Club account.
 	The client is requesting your permission to access the following:
       </p>
-      <Accordion style={{ marginBottom: "20px" }}>
+      <Accordion>
 	<AccordionItem title="Client Description" open={true}>
 	  <p>{props.client.description}</p>
 	</AccordionItem>
@@ -43,7 +50,9 @@ const PermissionsForm = (props: { client: TypeAuthGrant, state: string }) => {
 	{ (!props.client.scope?.includes("email")) ? null : (<EmailScope />) }
 	{ (!props.client.scope?.includes("modify")) ? null : (<ModifyScope />) }
       </Accordion>
-      <p style={{ marginBottom: "20px" }}>Your password will never be shared</p>
+      <p style={{ marginTop: "20px", marginBottom: "20px" }}>
+	Your password will never be shared
+      </p>
       <Button className="perm-button" onClick={onAccept}>
 	Accept
 	<ArrowRight className="button--arrow" />

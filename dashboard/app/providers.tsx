@@ -1,24 +1,33 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Content, Theme } from '@carbon/react'
 import Header from '@/components/NavHeader'
 import { RandContext } from './context'
 
 const Provider = (props: { children : any; random: number }) => {
-  const [theme, setTheme] = useState("white")
-
-  const savedTheme = localStorage.getItem("theme")
-  if ((savedTheme === "white" || savedTheme === "g100") && savedTheme != theme) {
-    setTheme(savedTheme)
-  }
+  const [theme, setTheme] = useState<"white" | "g100">("white")
+  const savedTheme = (typeof window !== "undefined") ?
+    localStorage.getItem("theme") : theme
 
   const updateTheme = (newTheme : string) => {
     if ((newTheme === "white" || newTheme === "g100") && newTheme != theme) {
-      localStorage.setItem("theme", newTheme)
       setTheme(newTheme)
     }
   }
+
+  useEffect(() => {
+    if ((savedTheme === "white" || savedTheme === "g100") &&
+      savedTheme != theme) {
+        setTheme(savedTheme)
+      }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("theme", theme)
+    }
+  }, [theme])
 
   return (
     <Theme theme={theme}>

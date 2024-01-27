@@ -1,6 +1,7 @@
 'use client'
 
 import { GetClient, IsAPIFailure, IsAPISuccess } from '@/APIController/API'
+import { APIResponse } from '@/APIController/types'
 import { ValidateClientURLParams } from '@/APIController/Validation'
 import { TypeAuthGrant, TypeClient, TypeGetClientResponse } from '@/APIController/types'
 import AlertBanner from '@/components/AlertBanner'
@@ -9,7 +10,7 @@ import PermissionsForm from '@/components/Permissions/Form'
 import SigninForm from '@/components/SigninForm'
 import SignupForm from '@/components/SignupForm'
 import { Accordion, AccordionItem, Link, Loading } from '@carbon/react'
-import { redirect, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { useCookies } from 'next-client-cookies'
 import './style.scss'
@@ -81,7 +82,7 @@ const Permissions = (props: { client : TypeAuthGrant }) => {
 
   // Fetch and verify client information.
   const [clientError, setClientError] = useState("")
-  const [clientData, setClientData] = useState<TypeClient | null>(null)
+  const [clientData, setClientData] = useState<APIResponse | TypeClient | null>(null)
   if (clientData === null && clientError === "") {
     GetClient(props.client.client_id).then((res) => {
       if (!IsAPISuccess(res)) {
@@ -162,7 +163,7 @@ export default function Page() {
 
     // No URL parameters and user is already signed in, redirect to dashboard.
     if (typeof jwt !== "undefined" && client.response_type === null) {
-      redirect("/")
+      window.location.replace("/")
       return null
     }
 
