@@ -30,10 +30,12 @@ const SigninForm = (props: { setView: Function }) => {
     // Make API call.
     PostSignin(form).then((res) => {
       if (IsAPISuccess(res)) {
-	if (typeof res.jwt != "undefined") {
+	if (typeof res.jwt !== "undefined") {
 	  cookies.set('ows-jwt', res.jwt)
 	}
-	location.reload()
+        if (typeof window !== "undefined") {
+          window.location.reload()
+        }
 	return
       }
 

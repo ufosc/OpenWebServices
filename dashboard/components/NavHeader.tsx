@@ -13,8 +13,6 @@ const NavHeader = (props : { setTheme: Function }) => {
 
   const themeSelector = () => {
     const { theme } = useTheme()
-    if (props.setTheme === undefined) return null;
-
     return (theme == "white") ? (
       <HeaderGlobalAction aria-label="Theme Selector"
 	onClick={() => props.setTheme("g100")}>
@@ -30,7 +28,9 @@ const NavHeader = (props : { setTheme: Function }) => {
 
   const onSignout = () => {
     cookies.remove('ows-jwt')
-    location.reload()
+    if (typeof window !== "undefined") {
+      window.location.replace("/")
+    }
   }
 
   return (

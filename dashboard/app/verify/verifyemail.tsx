@@ -1,7 +1,7 @@
 'use client'
 
 import './page.scss'
-import ImageBanner from '@/components/ImageBanner/ImageBanner'
+import ImageBanner from '@/components/ImageBanner/imagebanner'
 import { RandContext } from '../context'
 import { useContext } from 'react'
 import { Heading, Link } from '@carbon/react'
@@ -19,7 +19,7 @@ const VerifyEmailPage = () => {
 	</p>
 	<Link href="/authorize">Return to Sign in</Link>
       </div>
-      <ImageBanner random={random} />
+      <ImageBanner/>
     </div>
   )
 }

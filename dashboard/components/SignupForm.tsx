@@ -22,7 +22,7 @@ const SignupForm = (props: { setView: Function }) => {
 
     // Validate email address.
     if (!ValidateEmail(form.email)) {
-      setHasError("Email address must be a valid @ufl.edu address")
+      setHasError("Email address must be a valid address")
       return
     }
 
@@ -40,13 +40,13 @@ const SignupForm = (props: { setView: Function }) => {
       password: form.password,
       captcha: "123"
     }).then((res) => {
-      if (IsAPISuccess(res)) {
-	location.replace("/verify")
+      if (IsAPISuccess(res) && typeof window !== "undefined") {
+        window.location.replace("/verify")
 	return
       }
 
       let msg = (IsAPIFailure(res) && typeof res.error != "undefined") ?
-	res.error : "An unknown error has occured. Please try again later."
+	res.error : "An unknown error has occurred. Please try again later."
 
       setHasError(msg)
     }).catch((err) => {

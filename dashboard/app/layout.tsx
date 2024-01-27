@@ -1,6 +1,7 @@
 import './globals.scss'
 import type { Metadata } from 'next'
 import Provider from './providers'
+import { CookiesProvider } from 'next-client-cookies/server'
 
 export const metadata: Metadata = {
   title: 'UF Open Source Club | OpenWebServices',
@@ -12,7 +13,9 @@ export default function RootLayout(props: {children: any}) {
   return (
     <html lang="en">
       <body>
-	<Provider random={random}>{props.children}</Provider>
+	<CookiesProvider>
+	  <Provider random={random}>{props.children}</Provider>
+	</CookiesProvider>
       </body>
     </html>
   )

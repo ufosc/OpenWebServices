@@ -1,9 +1,11 @@
 import axios, { AxiosResponse, AxiosError } from 'axios'
 import { TypeSigninBody, TypeSignupBody, APIResponse } from './types'
 
+const RootURL = "https://api.testing.ufosc.org"
+
 export const GetClient = (id : string) => {
   return new Promise((resolve: Function, reject: Function) => {
-    axios.get(`client/${encodeURIComponent(id)}`).then((res : AxiosResponse) => {
+    axios.get(`${RootURL}/client/${encodeURIComponent(id)}`).then((res : AxiosResponse) => {
       resolve(res.data)
     }).catch((err : AxiosError) => {
       if (err.response && IsAPIFailure(err.response.data)) {
@@ -17,7 +19,7 @@ export const GetClient = (id : string) => {
 
 export const PostSignin = (body: TypeSigninBody) => {
   return new Promise((resolve: Function, reject: Function) => {
-    axios.post('/auth/signin', body)
+    axios.post(`${RootURL}/auth/signin`, body)
       .then((res : AxiosResponse) => {
 	resolve(res.data)
       })
@@ -33,7 +35,7 @@ export const PostSignin = (body: TypeSigninBody) => {
 
 export const PostSignup = (body: TypeSignupBody) => {
   return new Promise((resolve: Function, reject: Function) => {
-    axios.post('/auth/signup', body)
+    axios.post(`${RootURL}/auth/signup`, body)
       .then((res : AxiosResponse) => {
 	resolve(res.data)
       })
@@ -49,7 +51,7 @@ export const PostSignup = (body: TypeSignupBody) => {
 
 export const GetUser = (jwt : string) => {
   return new Promise((resolve: Function, reject: Function) => {
-    axios.get('/user', { headers: { 'Authorization': `Bearer ${jwt}`} })
+    axios.get(`${RootURL}/user`, { headers: { 'Authorization': `Bearer ${jwt}`} })
       .then((res : AxiosResponse) => {
 	resolve(res.data)
       })
@@ -66,7 +68,7 @@ export const GetUser = (jwt : string) => {
 export const UpdateUser = (firstName : string, lastName : string,
   jwt : string) => {
   return new Promise((resolve: Function, reject: Function) => {
-    axios.put('/user', { first_name: firstName, last_name: lastName },
+    axios.put(`${RootURL}/user`, { first_name: firstName, last_name: lastName },
       { headers: { 'Authorization': `Bearer ${jwt}` }})
       .then((res : AxiosResponse) => {
 	resolve(res.data)
