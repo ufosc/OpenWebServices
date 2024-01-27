@@ -16,8 +16,9 @@ spec:
     spec:
       containers:
         - name: oauth2-backend
-          image: oauth2
+          #image: oauth2
           #imagePullPolicy: Never
+          image: us-central1-docker.pkg.dev/innate-concept-409007/docker-repo/oauth2:v0.0.2
           env:
             - name: MONGO_URI
               value: "mongodb://mongodb-service.default.svc.cluster.local:27017"
@@ -27,6 +28,8 @@ spec:
               value: "oauth2-testing"
             - name: NOTIF_EMAIL_ADDR
               value: "no-reply.notifications@ufosc.org"
+            - name: WEBSMTP
+              value: "http://websmtp-service.default.svc.cluster.local:3001/mail/send"
             - name: SECRET
               valueFrom:
                 secretKeyRef:
@@ -53,13 +56,15 @@ spec:
     spec:
       containers:
         - name: oauth2-dashboard
-          image: dashboard
+          image: us-central1-docker.pkg.dev/innate-concept-409007/docker-repo/dashboard:v0.0.2
           #imagePullPolicy: Never
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: oauth2-service-server
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
   labels:
     app: oauth2
 spec:
@@ -76,6 +81,8 @@ apiVersion: v1
 kind: Service
 metadata:
   name: oauth2-service-dashboard
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
   labels:
     app: oauth2
 spec:

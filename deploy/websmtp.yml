@@ -18,7 +18,7 @@ spec:
         - name: websmtp
           #image: websmtp
           #imagePullPolicy: Never
-          image: us-central1-docker.pkg.dev/innate-concept-409007/docker-repo/websmtp:v0.0.1
+          image: us-central1-docker.pkg.dev/innate-concept-409007/docker-repo/websmtp:v0.0.2
           env:
             - name: GIN_MODE
               value: "release"
