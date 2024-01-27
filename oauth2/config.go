@@ -14,6 +14,7 @@ type Config struct {
 	NOTIF_EMAIL_ADDR string
 	SECRET           string
 	PORT             string
+	WEBSMTP          string
 }
 
 // GetDefaultConfig populates a Config instance with default configuration
@@ -25,6 +26,7 @@ func GetDefaultConfig() (c Config) {
 	c.NOTIF_EMAIL_ADDR = "no-reply.notifications@ufosc.org"
 	c.SECRET = "369369369369369369"
 	c.PORT = "8080"
+	c.WEBSMTP = "http://localhost:3001"
 	return c
 }
 
@@ -36,7 +38,7 @@ func GetConfig() Config {
 		log.Println("No .env file found")
 	}
 
-	if mode := os.Getenv("GIN_MODE"); mode == "debug" || mode == "production" {
+	if mode := os.Getenv("GIN_MODE"); mode == "debug" || mode == "release" {
 		c.GIN_MODE = mode
 	}
 	if uri := os.Getenv("MONGO_URI"); uri != "" {
@@ -53,6 +55,9 @@ func GetConfig() Config {
 	}
 	if port := os.Getenv("PORT"); port != "" {
 		c.PORT = port
+	}
+	if websmtp := os.Getenv("WEBSMTP"); websmtp != "" {
+		c.WEBSMTP = websmtp
 	}
 
 	return c
