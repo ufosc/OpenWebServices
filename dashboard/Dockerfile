@@ -26,8 +26,8 @@ COPY --from=builder --chown=nextjs:nodejs /dashboard/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /dashboard/.next/static ./.next/static
 
 USER nextjs
-EXPOSE 3000
 ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
+EXPOSE 3000
 
 CMD ["node", "server.js"]
