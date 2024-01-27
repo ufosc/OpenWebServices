@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ufosc/OpenWebServices/pkg/authapi"
 	"github.com/ufosc/OpenWebServices/pkg/authmw"
+	"net/http"
 	"time"
 )
 
@@ -18,7 +19,7 @@ func main() {
 	// Set up CORS.
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"POST"},
+		AllowMethods:     []string{"POST, PUT, GET, DELETE"},
 		AllowHeaders:     []string{"*"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
@@ -27,7 +28,8 @@ func main() {
 
 	// API controller.
 	api, err := authapi.CreateAPIController(config.MONGO_URI,
-		config.DB_NAME, config.NOTIF_EMAIL_ADDR, config.SECRET)
+		config.DB_NAME, config.NOTIF_EMAIL_ADDR,
+		config.WEBSMTP, config.SECRET)
 
 	if err != nil {
 		panic(err)
@@ -58,7 +60,7 @@ func main() {
 		[]string{"users.read"}, []string{}), api.GetUsersRoute())
 
 	r.POST("/client", authmw.AuthenticateUser(config.SECRET, api.DB(),
-		"client.create"), api.CreateClientRoute())
+		"clients.create"), api.CreateClientRoute())
 
 	r.GET("/clients", authmw.AuthenticateBearer(config.SECRET, api.DB(),
 		[]string{"clients.read"}, []string{}), api.GetClientsRoute())
@@ -66,5 +68,10 @@ func main() {
 	r.DELETE("/client/:id", authmw.AuthenticateUser(config.SECRET, api.DB()),
 		api.DeleteClientRoute())
 
-	r.Run()
+	// Status check.
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, "ok")
+	})
+
+	r.Run("0.0.0.0:" + config.PORT)
 }
