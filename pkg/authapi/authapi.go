@@ -32,35 +32,33 @@ type APIController interface {
 
 // DefaultAPIController implements APIController using authdb.
 type DefaultAPIController struct {
-	db     authdb.Database
-	ms     MailSender
-	secret string
+	db      authdb.Database
+	address string
+	websmtp string
+	secret  string
 }
 
 // CreateAPIController creates an instance of APIController using uri and
 // name as the MongoDB connection string and database name, respectively.
 // addr is the email address to send verification emails from. secret is
 // the random string for signing JWTs.
-func CreateAPIController(uri, name, addr, secret string) (APIController, error) {
+func CreateAPIController(uri, name, addr, websmtp,
+	secret string) (APIController, error) {
+
 	cntrl := new(DefaultAPIController)
-	cntrl.ms = NewMailSender(addr)
 	db, err := authdb.NewDatabase(uri, name)
 	if err != nil {
 		return nil, err
 	}
-	if err := cntrl.ms.Start(1); err != nil {
-		return nil, err
-	}
 	cntrl.db = db
 	cntrl.secret = secret
+	cntrl.address = addr
+	cntrl.websmtp = websmtp
 	return cntrl, nil
 }
 
 // Stop the underlying database.
 func (cntrl *DefaultAPIController) Stop() error {
-	if err := cntrl.ms.Stop(); err != nil {
-		return err
-	}
 	return cntrl.db.(*authdb.MongoDatabase).Stop()
 }
 

@@ -89,5 +89,5 @@ var redirectURIRegex = regexp.MustCompile(`^https:\/\/([a-z0-9]|\.|\-|\_)*(\/[a-
 
 // ValidateRedirectURI validates a client redirect URI.
 func ValidateRedirectURI(uri string) bool {
-	return !redirectURIRegex.MatchString(uri)
+	return redirectURIRegex.MatchString(uri)
 }

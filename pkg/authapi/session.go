@@ -114,7 +114,8 @@ func (cntrl *DefaultAPIController) SignUpRoute() gin.HandlerFunc {
 		}
 
 		// Send verification email.
-		if !cntrl.ms.SendVerification(id, pendingUser.Email) {
+		if !cntrl.SendVerification(id, pendingUser.Email) {
+			cntrl.db.Users().DeletePendingByID(id)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "Internal server error. Please try again later",
 			})

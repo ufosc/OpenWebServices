@@ -264,7 +264,7 @@ func (cntrl *DefaultAPIController) CreateClientRoute() gin.HandlerFunc {
 		// User must have client creation realm.
 		hasRealm := false
 		for _, v := range user.Realms {
-			if v == "client.create" {
+			if v == "clients.create" {
 				hasRealm = true
 				break
 			}

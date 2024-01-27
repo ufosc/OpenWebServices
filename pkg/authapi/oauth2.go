@@ -163,7 +163,7 @@ func (cntrl *DefaultAPIController) TokenRoute() gin.HandlerFunc {
 }
 
 func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
-	authmw.AuthenticateClient(cntrl.secret, cntrl.db)
+	authmw.AuthenticateClient(cntrl.secret, cntrl.db)(c)
 	if c.IsAborted() {
 		return
 	}
@@ -216,7 +216,7 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 	}
 
 	// Ensure code has not expired.
-	if (codeExists.CreatedAt + codeExists.TTL) > time.Now().Unix() {
+	if (codeExists.CreatedAt + codeExists.TTL) < time.Now().Unix() {
 		cntrl.db.Tokens().DeleteAuthByID(codeExists.ID)
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error": "Token expired or could not be found",
@@ -306,7 +306,7 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 }
 
 func (cntrl *DefaultAPIController) handleRefreshToken(c *gin.Context) {
-	authmw.AuthenticateClient(cntrl.secret, cntrl.db)
+	authmw.AuthenticateClient(cntrl.secret, cntrl.db)(c)
 	if c.IsAborted() {
 		return
 	}
