@@ -7,10 +7,11 @@ import { ValidateEmail } from '@/APIController/Validation'
 import { useTheme, Button, Form, Heading, TextInput, Link } from '@carbon/react'
 import { useState } from 'react'
 import { useCookies } from 'next-client-cookies'
+import { useRouter } from 'next/navigation'
 
 const SigninForm = (props: { setView: Function }) => {
   const cookies = useCookies()
-
+  const router = useRouter()
   const headingColor = () => {
     const { theme } = useTheme()
     return (theme == "white") ? "black" : "white"
@@ -30,12 +31,10 @@ const SigninForm = (props: { setView: Function }) => {
     // Make API call.
     PostSignin(form).then((res) => {
       if (IsAPISuccess(res)) {
-	if (typeof res.jwt !== "undefined") {
-	  cookies.set('ows-jwt', res.jwt)
+	if (typeof res.token !== "undefined") {
+	  cookies.set('ows-access-token', res.token)
 	}
-        if (typeof window !== "undefined") {
-          window.location.reload()
-        }
+        router.refresh()
 	return
       }
 
