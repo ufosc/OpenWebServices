@@ -1,7 +1,7 @@
 'use client'
 
 import { UpdateUser, IsAPISuccess, IsAPIFailure } from '@/APIController/API'
-import { redirect } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useCookies } from 'next-client-cookies'
 import { Loading } from '@carbon/react'
@@ -28,9 +28,11 @@ const editButton = (isEditing : boolean, setIsEditing : Function) => {
 
 export default function MyAccount({ user } : any) {
   const cookies = useCookies()
-  const jwt = cookies.get('ows-jwt')
-  if (typeof jwt === "undefined") {
-    redirect("/authorize")
+  const router = useRouter()
+  const token = cookies.get('ows-access-token')
+  if (typeof token === "undefined") {
+    router.push("/authorize")
+    return
   }
 
   const headingColor = () => {
@@ -67,7 +69,7 @@ export default function MyAccount({ user } : any) {
       return
     }
 
-    UpdateUser(newData.first_name, newData.last_name, jwt)
+    UpdateUser(newData.first_name, newData.last_name, token as string)
       .then((res) => {
 	if (IsAPISuccess(res)) {
 	  setHasSuccess(true)
@@ -75,8 +77,10 @@ export default function MyAccount({ user } : any) {
 	  return
 	}
 
-	let msg = (IsAPIFailure(res) && typeof res.error != "undefined") ?
-	  res.error : "An unknown error has occurred. Please try again later."
+	let msg = (IsAPIFailure(res) &&
+          typeof res.error_description !== "undefined") ?
+	  res.error_description :
+          "An unknown error has occurred. Please try again later."
 
 	setHasError(msg)
       }).catch((err) => {

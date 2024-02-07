@@ -1,7 +1,7 @@
 import axios, { AxiosResponse, AxiosError } from 'axios'
 import { TypeSigninBody, TypeSignupBody, APIResponse } from './types'
 
-const RootURL = "https://api.testing.ufosc.org"
+const RootURL = "http://localhost:8080"
 
 export const GetClient = (id : string) => {
   return new Promise((resolve: Function, reject: Function) => {
@@ -49,9 +49,9 @@ export const PostSignup = (body: TypeSignupBody) => {
   })
 }
 
-export const GetUser = (jwt : string) => {
+export const GetUser = (token : string) => {
   return new Promise((resolve: Function, reject: Function) => {
-    axios.get(`${RootURL}/user`, { headers: { 'Authorization': `Bearer ${jwt}`} })
+    axios.get(`${RootURL}/user`, { headers: { 'Authorization': `Bearer ${token}`} })
       .then((res : AxiosResponse) => {
 	resolve(res.data)
       })
