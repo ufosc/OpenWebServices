@@ -3,270 +3,94 @@ package authmw
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ufosc/OpenWebServices/pkg/authdb"
-	"github.com/ufosc/OpenWebServices/pkg/common"
 	"net/http"
 	"strings"
 	"time"
 )
 
-// AuthenticateUser is a middleware that verifies a user JWT in the
-// assertion URL parameter.
-func AuthenticateUser(secret string, db authdb.Database,
-	realms ...string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		userAssertion := c.DefaultQuery("assertion", "")
-		if userAssertion == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "expected assertion URL parameter",
-			})
-			return
-		}
-
-		// Validate JWT.
-		claims, ok := common.ValidateJWT(userAssertion, secret)
-		if !ok || claims.Type != "user" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "invalid or expired assertion",
-			})
-			return
-		}
-
-		// Check if subject exists.
-		userExists, err := db.Users().FindByID(claims.Sub)
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "user not found",
-			})
-			return
-		}
-
-		// Ensure password hash not changed.
-		if userExists.Password != claims.PKey {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "user password has changed",
-			})
-			return
-		}
-
-		// Ensure user has all required realms.
-		hasRealms := map[string]bool{}
-		for _, realm := range userExists.Realms {
-			hasRealms[realm] = true
-		}
-
-		for _, realm := range realms {
-			if !hasRealms[realm] {
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-					"error": "insufficient user permission",
-				})
-				return
-			}
-		}
-
-		c.Set("user", userExists)
-		c.Next()
-	}
+// Config defines the scope and realm requirements for a
+// route authentication middleware.
+type Config struct {
+	Scope  []string
+	Realms []string
 }
 
-// AuthenticateClient is a middleware that authenticates a client JWT in
-// the client_assertion URL parameter.
-func AuthenticateClient(secret string, db authdb.Database) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		clientAssertion := c.DefaultQuery("client_assertion", "")
-		if clientAssertion == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "expected assertion URL parameter",
-			})
-			return
-		}
+// WWW-Authenticate response header errors.
+// See: https://datatracker.ietf.org/doc/html/rfc6750#section-3
+const (
+	ErrInvalid = "invalid_request"
+	ErrToken   = "invalid_token"
+	ErrScope   = "insufficient_scope"
+)
 
-		// Validate JWT.
-		claims, ok := common.ValidateJWT(clientAssertion, secret)
-		if !ok || claims.Type != "client" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "invalid or expired client_assertion",
-			})
-			return
-		}
+func setError(c *gin.Context, code, desc string) {
+	scopes, _ := c.Get("header-scopes")
+	realms, _ := c.Get("header-realms")
 
-		// Ensure client exists.
-		clientExists, err := db.Clients().FindByID(claims.Sub)
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "client not found",
-			})
-			return
-		}
+	scopesStr, _ := scopes.(string)
+	realmsStr, _ := realms.(string)
 
-		// Ensure client owner still exists.
-		_, err = db.Users().FindByID(clientExists.Owner)
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "user owner associated with client no longer exists",
-			})
-			return
-		}
+	c.Header("WWW-Authenticate", "Bearer scope=\""+scopesStr+
+		"\", realms=\""+realmsStr+"\", error=\""+code+
+		"\", error_description=\""+desc+"\"")
 
-		// Ensure client is not expired.
-		if clientExists.CreatedAt+clientExists.TTL < time.Now().Unix() {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "client lease has expired",
-			})
-			return
-		}
-
-		// Ensure key has not changed.
-		if clientExists.Key != claims.PKey {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "invalid client key",
-			})
-			return
-		}
-
-		c.Set("client", clientExists)
-		c.Next()
+	httpCode := http.StatusUnauthorized
+	if code == ErrInvalid {
+		httpCode = http.StatusBadRequest
 	}
+
+	c.AbortWithStatusJSON(httpCode, gin.H{
+		"error":             code,
+		"error_description": desc,
+	})
 }
 
-// AuthenticateBearer is a middleware the verifies an access bearer token.
-func AuthenticateBearer(secret string, db authdb.Database, realms,
-	scope []string) gin.HandlerFunc {
+// X generates a gin handler func based on the specified
+// configuration and database.
+func X(db authdb.Database, config Config) gin.HandlerFunc {
+	scopeStr := ""
+	for _, val := range config.Scope {
+		scopeStr += val + " "
+	}
+
+	realmStr := ""
+	for _, val := range config.Realms {
+		realmStr += val + " "
+	}
+
 	return func(c *gin.Context) {
-		scopeStr := ""
-		for _, val := range scope {
-			scopeStr += val + " "
-		}
-
-		realmStr := ""
-		for _, val := range realms {
-			realmStr = val + " "
-		}
-
+		c.Set("header-scopes", scopeStr)
+		c.Set("header-realms", realmStr)
 		tkStr := strings.Split(c.GetHeader("Authorization"), " ")
-		if len(tkStr) < 2 {
-			c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
-				"\" realms=\""+realmStr+
-				"\" error=\"invalid_request\"")
-
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "expected authorization header",
-			})
+		if len(tkStr) != 2 {
+			setError(c, ErrInvalid, "expected Authorization header")
 			return
 		}
 
 		if tkStr[0] != "Bearer" {
-			c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
-				"\" realms=\""+realmStr+
-				"\" error=\"invalid_request\"")
-
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "Authorization scheme must be 'bearer'",
-			})
+			setError(c, ErrInvalid, "auth scheme must be Bearer")
 			return
 		}
 
-		// Check if token is JWT.
-		if claims, ok := common.ValidateJWT(tkStr[1], secret); ok {
-			if claims.Type != "user" {
-				c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
-					"\" realms=\""+realmStr+
-					"\" error=\"invalid_request\"")
-
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-					"error": "jwt must be of type 'user'",
-				})
-
-				return
-			}
-
-			// Check if subject exists.
-			userExists, err := db.Users().FindByID(claims.Sub)
-			if err != nil {
-				c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
-					"\" realms=\""+realmStr+
-					"\" error=\"invalid_request\"")
-
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-					"error": "user not found",
-				})
-				return
-			}
-
-			// Ensure password hash not changed.
-			if userExists.Password != claims.PKey {
-				c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
-					"\" realms=\""+realmStr+
-					"\" error=\"invalid_request\"")
-
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-					"error": "user password has changed",
-				})
-				return
-			}
-
-			// Ensure user has required realms.
-			haveRealms := map[string]bool{}
-			for _, realm := range userExists.Realms {
-				haveRealms[realm] = true
-			}
-
-			for _, realm := range realms {
-				if !haveRealms[realm] {
-					c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
-						"\" realms=\""+realmStr+
-						"\" error=\"insufficient_scope\"")
-
-					c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-						"error": "insufficient realm permissions",
-					})
-
-					return
-				}
-			}
-
-			c.Set("user", userExists)
-			c.Set("client", authdb.ClientModel{
-				Scope: []string{"email", "public", "modify"},
-			})
-
-			return
-		}
-
-		// Verify key exists.
+		// Verify Access token exists.
 		tkExists, err := db.Tokens().FindAccessByID(tkStr[1])
 		if err != nil {
-			c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
-				"\" realms=\""+realmStr+
-				"\" error=\"invalid_token\"")
-
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "Access token expired or could not be found",
-			})
+			setError(c, ErrToken, "access token expired/not found")
 			return
 		}
 
 		// Ensure key is not expired.
 		if (tkExists.CreatedAt + tkExists.TTL) < time.Now().Unix() {
-			c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
-				"\" realms=\""+realmStr+
-				"\" error=\"invalid_token\"")
-
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "Access token expired or could not be found",
-			})
+			db.Tokens().DeleteAccessByID(tkStr[1])
+			setError(c, ErrToken, "Access token expired / not found")
 			return
 		}
 
 		// Verify associated user exists.
 		userExists, err := db.Users().FindByID(tkExists.UserID)
 		if err != nil {
-			c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
-				"\" realms=\""+realmStr+
-				"\" error=\"invalid_token\"")
-
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "The user associated with this token could not be found",
-			})
+			db.Tokens().DeleteAccessByID(tkStr[1])
+			setError(c, ErrToken, "User not found")
 			return
 		}
 
@@ -276,31 +100,25 @@ func AuthenticateBearer(secret string, db authdb.Database, realms,
 			haveRealms[realm] = true
 		}
 
-		for _, realm := range realms {
+		for _, realm := range config.Realms {
 			if !haveRealms[realm] {
-				c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
-					"\" realms=\""+realmStr+
-					"\" error=\"insufficient_scope\"")
-
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-					"error": "insufficient realm permissions",
-				})
-
+				setError(c, ErrScope, "missing realms")
 				return
 			}
 		}
 
 		// Verify associated client exists.
-		clientExists, err := db.Clients().FindByID(tkExists.ClientID)
-		if err != nil {
-			c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
-				"\" realms=\""+realmStr+
-				"\" error=\"invalid_token\"")
+		clientExists := authdb.ClientModel{
+			ID:    "0",
+			Scope: []string{"dashboard", "users.modify"},
+		}
 
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "The client associated with this token could not be found",
-			})
-			return
+		if tkExists.ClientID != "0" {
+			clientExists, err = db.Clients().FindByID(tkExists.ClientID)
+			if err != nil {
+				setError(c, ErrToken, "client not found")
+				return
+			}
 		}
 
 		// Verify token is authorized for this route.
@@ -309,16 +127,9 @@ func AuthenticateBearer(secret string, db authdb.Database, realms,
 			haveScope[value] = true
 		}
 
-		for _, value := range scope {
+		for _, value := range config.Scope {
 			if !haveScope[value] {
-				c.Header("WWW-Authenticate", "Bearer scope=\""+scopeStr+
-					"\" realms=\""+realmStr+
-					"\" error=\"insufficient_scope\"")
-
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-					"error": "Insufficient client permission",
-				})
-
+				setError(c, ErrScope, "insufficient client scope")
 				return
 			}
 		}
