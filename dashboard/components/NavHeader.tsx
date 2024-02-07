@@ -3,13 +3,15 @@
 import { useContext } from 'react'
 import { UserAvatar, Asleep, Awake, Logout } from '@carbon/icons-react'
 import { useCookies } from 'next-client-cookies'
+import { useRouter } from 'next/navigation'
 
 import { Header, HeaderContainer, HeaderName, HeaderGlobalBar,
   HeaderGlobalAction, SkipToContent, useTheme } from '@carbon/react'
 
 const NavHeader = (props : { setTheme: Function }) => {
   const cookies = useCookies()
-  const jwt = cookies.get('ows-jwt')
+  const router = useRouter()
+  const token = cookies.get('ows-access-token')
 
   const themeSelector = () => {
     const { theme } = useTheme()
@@ -27,10 +29,8 @@ const NavHeader = (props : { setTheme: Function }) => {
   }
 
   const onSignout = () => {
-    cookies.remove('ows-jwt')
-    if (typeof window !== "undefined") {
-      window.location.replace("/")
-    }
+    cookies.remove('ows-access-token')
+    router.push("/authorize")
   }
 
   return (
@@ -42,7 +42,7 @@ const NavHeader = (props : { setTheme: Function }) => {
 	<HeaderGlobalBar>
 	  { themeSelector() }
 	  {
-	    (typeof jwt !== "undefined") ? (
+	    (typeof token !== "undefined") ? (
 	      <>
 		<HeaderGlobalAction aria-label="Logout" tooltipAlignment="center"
 		  onClick={onSignout}>

@@ -6,10 +6,11 @@ import { useTheme, Button, Form, Heading, Accordion, AccordionItem } from '@carb
 import { TypeAuthGrant } from '@/APIController/types'
 import { PublicScope, EmailScope, ModifyScope } from './scopes'
 import { useCookies } from 'next-client-cookies'
-import { redirect } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 
 const PermissionsForm = (props: { client: any, state: string }) => {
   const cookies = useCookies()
+  const router = useRouter()
 
   const headingColor = () => {
     const { theme } = useTheme()
@@ -17,19 +18,13 @@ const PermissionsForm = (props: { client: any, state: string }) => {
   }
 
   const onAccept = () => {
-    if (typeof window === "undefined") {
-      return
-    }
-    window.location.replace(`https://api.testing.ufosc.org/auth/authorize?response_type=${props.client.response_type}` +
+    router.push(`http://localhost:8080/auth/authorize?response_type=${props.client.response_type}` +
       `&client_id=${props.client.id}&redirect_uri=${encodeURIComponent(props.client.redirect_uri)}` +
-      `&state=${props.state}&assertion=${cookies.get('ows-jwt')}`)
+      `&state=${props.state}&assertion=${cookies.get('ows-access-token')}`)
   }
 
   const onReject = () => {
-    if (typeof window === "undefined") {
-      return
-    }
-    window.location.replace("/")
+    router.replace("/")
   }
 
   return (

@@ -1,12 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { ArrowRight } from '@carbon/icons-react'
 import { useTheme, Form, Button, TextInput, Heading } from '@carbon/react'
 import { PostSignup, IsAPIFailure, IsAPISuccess } from '@/APIController/API'
 import { ValidateEmail } from '@/APIController/Validation'
 
 const SignupForm = (props: { setView: Function }) => {
+  const router = useRouter()
   const headingColor = () => {
     const { theme } = useTheme()
     return (theme == "white") ? "black" : "white"
@@ -40,8 +42,8 @@ const SignupForm = (props: { setView: Function }) => {
       password: form.password,
       captcha: "123"
     }).then((res) => {
-      if (IsAPISuccess(res) && typeof window !== "undefined") {
-        window.location.replace("/verify")
+      if (IsAPISuccess(res)) {
+        router.push("/verify")
 	return
       }
 
