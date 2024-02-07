@@ -20,43 +20,18 @@ func (cntrl *DefaultAPIController) GetUserRoute() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		// Get client.
-		clientAny, ok := c.Get("client")
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Client not found",
-			})
-			return
-		}
-
-		client, ok := clientAny.(authdb.ClientModel)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Client not found",
-			})
-			return
-		}
+		clientAny, _ := c.Get("client")
+		client, _ := clientAny.(authdb.ClientModel)
 
 		// Get user.
-		userAny, ok := c.Get("user")
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "User not found",
-			})
-			return
-		}
-
-		user, ok := userAny.(authdb.UserModel)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "User not found",
-			})
-			return
-		}
+		userAny, _ := c.Get("user")
+		user, _ := userAny.(authdb.UserModel)
 
 		// Currently, "email" is the highest level of privilege.
+		// We also want to allow "dashboard" full access.
 		hasEmailScope := false
 		for _, scope := range client.Scope {
-			if scope == "email" {
+			if scope == "email" || scope == "dashboard" {
 				hasEmailScope = true
 				break
 			}
@@ -87,28 +62,14 @@ func (cntrl *DefaultAPIController) GetUserRoute() gin.HandlerFunc {
 // UpdateUserRoute updates user information.
 func (cntrl *DefaultAPIController) UpdateUserRoute() gin.HandlerFunc {
 	return func(c *gin.Context) {
-
-		// Get user.
-		userAny, ok := c.Get("user")
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "User not found",
-			})
-			return
-		}
-
-		user, ok := userAny.(authdb.UserModel)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "User not found",
-			})
-			return
-		}
-
 		var req struct {
 			FirstName string `json:"first_name" binding:"required"`
 			LastName  string `json:"last_name" binding:"required"`
 		}
+
+		// Get user.
+		userAny, _ := c.Get("user")
+		user, _ := userAny.(authdb.UserModel)
 
 		// Extract JSON body.
 		if err := c.BindJSON(&req); err != nil {
@@ -225,7 +186,6 @@ func (cntrl *DefaultAPIController) GetClientRoute() gin.HandlerFunc {
 // It expects user authentication (clients are owned by users).
 func (cntrl *DefaultAPIController) CreateClientRoute() gin.HandlerFunc {
 	return func(c *gin.Context) {
-
 		// Request body.
 		var req struct {
 			Name         string   `json:"name" binding:"required"`
@@ -244,22 +204,8 @@ func (cntrl *DefaultAPIController) CreateClientRoute() gin.HandlerFunc {
 		}
 
 		// Get underlying user (from middleware).
-		userAny, ok := c.Get("user")
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "User not found",
-			})
-			return
-		}
-
-		// Cast to user model.
-		user, ok := userAny.(authdb.UserModel)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "User not found",
-			})
-			return
-		}
+		userAny, _ := c.Get("user")
+		user, _ := userAny.(authdb.UserModel)
 
 		// User must have client creation realm.
 		hasRealm := false
@@ -380,21 +326,8 @@ func (cntrl *DefaultAPIController) CreateClientRoute() gin.HandlerFunc {
 func (cntrl *DefaultAPIController) DeleteClientRoute() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		clientID := c.Param("id")
-		userAny, ok := c.Get("user")
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "User not found",
-			})
-			return
-		}
-
-		user, ok := userAny.(authdb.UserModel)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "User not found",
-			})
-			return
-		}
+		userAny, _ := c.Get("user")
+		user, _ := userAny.(authdb.UserModel)
 
 		clientExists, err := cntrl.db.Clients().FindByID(clientID)
 		if err != nil {

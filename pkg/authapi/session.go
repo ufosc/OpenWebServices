@@ -160,18 +160,24 @@ func (cntrl *DefaultAPIController) SignInRoute() gin.HandlerFunc {
 			return
 		}
 
-		// Generate JWT.
-		jwt := common.NewUserJWT(cntrl.secret, userExists)
-		if jwt == "" {
+		// Generate access token.
+		tk, err := cntrl.db.Tokens().CreateAccess(authdb.TokenModel{
+			ClientID:  "0",
+			UserID:    userExists.ID,
+			CreatedAt: time.Now().Unix(),
+			TTL:       1200,
+		})
+
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Internal server error. Please try again later",
+				"error": "internal server error",
 			})
 			return
 		}
 
 		c.JSON(http.StatusOK, gin.H{
 			"message": "success",
-			"jwt":     jwt,
+			"token":   tk,
 		})
 	}
 }
@@ -216,54 +222,5 @@ func (cntrl *DefaultAPIController) VerifyEmailRoute() gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"message": "success"})
-	}
-}
-
-// AuthClientRoute authenticates a client and issues a client JWT.
-func (cntrl *DefaultAPIController) AuthClientRoute() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var req struct {
-			ID   string `json:"id" binding:"required"`
-			Pkey string `json:"pkey" binding:"required"`
-		}
-
-		// Extract JSON body.
-		if err := c.BindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Missing required fields",
-			})
-			return
-		}
-
-		// Verify client exists.
-		clientExists, err := cntrl.db.Clients().FindByID(req.ID)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": "client not found",
-			})
-			return
-		}
-
-		// Verify Pkey.
-		if !common.VerifyPassword(clientExists.Key, req.Pkey) {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "incorrect key",
-			})
-			return
-		}
-
-		// Generate JWT.
-		jwt := common.NewClientJWT(cntrl.secret, clientExists)
-		if jwt == "" {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Internal server error. Please try again later",
-			})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"message": "success",
-			"jwt":     jwt,
-		})
 	}
 }

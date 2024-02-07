@@ -15,22 +15,8 @@ func (cntrl *DefaultAPIController) AuthorizationRoute() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		// Get underlying user.
-		userAny, ok := c.Get("user")
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "User not found",
-			})
-			return
-		}
-
-		// Cast to user model.
-		user, ok := userAny.(authdb.UserModel)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "User not found",
-			})
-			return
-		}
+		userAny, _ := c.Get("user")
+		user, _ := userAny.(authdb.UserModel)
 
 		// Gather query parameters.
 		responseType := c.DefaultQuery("response_type", "")
@@ -163,7 +149,7 @@ func (cntrl *DefaultAPIController) TokenRoute() gin.HandlerFunc {
 }
 
 func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
-	authmw.AuthenticateClient(cntrl.secret, cntrl.db)(c)
+	authmw.B(cntrl.db)(c)
 	if c.IsAborted() {
 		return
 	}
@@ -306,7 +292,7 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 }
 
 func (cntrl *DefaultAPIController) handleRefreshToken(c *gin.Context) {
-	authmw.AuthenticateClient(cntrl.secret, cntrl.db)(c)
+	authmw.B(cntrl.db)(c)
 	if c.IsAborted() {
 		return
 	}

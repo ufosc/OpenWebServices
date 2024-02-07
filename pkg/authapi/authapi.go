@@ -11,7 +11,6 @@ type APIController interface {
 	SignUpRoute() gin.HandlerFunc
 	SignInRoute() gin.HandlerFunc
 	VerifyEmailRoute() gin.HandlerFunc
-	AuthClientRoute() gin.HandlerFunc
 
 	AuthorizationRoute() gin.HandlerFunc
 	TokenRoute() gin.HandlerFunc
@@ -35,23 +34,18 @@ type DefaultAPIController struct {
 	db      authdb.Database
 	address string
 	websmtp string
-	secret  string
 }
 
 // CreateAPIController creates an instance of APIController using uri and
 // name as the MongoDB connection string and database name, respectively.
-// addr is the email address to send verification emails from. secret is
-// the random string for signing JWTs.
-func CreateAPIController(uri, name, addr, websmtp,
-	secret string) (APIController, error) {
-
+// addr is the email address to send verification emails from.
+func CreateAPIController(uri, name, addr, websmtp string) (APIController, error) {
 	cntrl := new(DefaultAPIController)
 	db, err := authdb.NewDatabase(uri, name)
 	if err != nil {
 		return nil, err
 	}
 	cntrl.db = db
-	cntrl.secret = secret
 	cntrl.address = addr
 	cntrl.websmtp = websmtp
 	return cntrl, nil
