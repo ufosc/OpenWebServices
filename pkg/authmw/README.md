@@ -1,7 +1,7 @@
 # authmw
 [![Go Reference](https://pkg.go.dev/badge/github.com/ufosc/OpenWebServices/pkg/authmw.svg)](https://pkg.go.dev/github.com/ufosc/OpenWebServices/pkg/authmw)
 
-authmw implements Golang Gin middleware for authenticating users & clients via JWT and OAuth2 bearer tokens.
+authmw implements Golang Gin middleware for adding authentication to routes.
 
 ## Install
 ```bash
@@ -16,31 +16,25 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/ufosc/OpenWebServices/pkg/authmw"
+    "net/http"
 )
 
 func main() {
 	r := gin.Default()
 
-	// Authenticates a user and expects them to have realm1, realm2
-	// privileges.
-	r.GET("/some/user/route", authmw.AuthenticateUser("secret", database,
-	"scope1", "scope2"), func(c *gin.Context) {
-		// Some middleware here.
-	})
+    // Create an authentication middleware function.
+    // You'll need a database object here!
+    mw := authmw.X(db, authmw.Config{
+        Scope:  []string{"clients.read"},
+        Realms: []string{"public"},
+    })
 
-	// Authenticates a client.
-	r.GET("/some/user/route", authmw.AuthenticateClient("secret", database),
-		func(c *gin.Context) {
-		// Some middleware here.
-	})
-
-	// Authenticates an OAuth2 access token (bearer schema). Expects
-	// assosciated client to have scope1, scope2, realm1, realm2 access.
-	r.GET("/some/user/route", authmw.AuthenticateBearer(database,
-		[]string{"realm1", "realm2"}, []string{"scope1", scope2"}),
-		func(c *gin.Context) {
-		// Some middleware here.
-	})
+    // Apply middleware to route.
+    r.Get("/my/route", mw, func(c *gin.Context) {
+        c.JSON(http.StatusOK, gin.H{
+            "message": "succesfully authenticated!",
+        })
+    })
 
 	r.Run()
 }
