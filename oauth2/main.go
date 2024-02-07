@@ -29,7 +29,7 @@ func main() {
 	// API controller.
 	api, err := authapi.CreateAPIController(config.MONGO_URI,
 		config.DB_NAME, config.NOTIF_EMAIL_ADDR,
-		config.WEBSMTP, config.SECRET)
+		config.WEBSMTP)
 
 	if err != nil {
 		panic(err)
@@ -37,38 +37,44 @@ func main() {
 
 	defer api.Stop()
 
-	// Auth routes.
+	// Auth.
 	r.POST("/auth/signup", api.SignUpRoute())
 	r.POST("/auth/signin", api.SignInRoute())
 	r.GET("/auth/verify/:ref", api.VerifyEmailRoute())
-	r.POST("/auth/client", api.AuthClientRoute())
 	r.GET("/auth/token", api.TokenRoute())
+	r.GET("/auth/authorize", authmw.A(api.DB()),
+		api.AuthorizationRoute())
 
-	r.GET("/auth/authorize", authmw.AuthenticateUser(config.SECRET,
-		api.DB()), api.AuthorizationRoute())
-
-	// Resource API.
+	// Resources.
+	xEmpty := authmw.X(api.DB(), authmw.Config{})
 	r.GET("/client/:id", api.GetClientRoute())
+	r.GET("/user", xEmpty, api.GetUserRoute())
 
-	r.GET("/user", authmw.AuthenticateBearer(config.SECRET, api.DB(),
-		[]string{}, []string{}), api.GetUserRoute())
+	r.PUT("/user", authmw.X(api.DB(), authmw.Config{
+		Scope: []string{"users.modify"},
+	}), api.UpdateUserRoute())
 
-	r.PUT("/user", authmw.AuthenticateBearer(config.SECRET, api.DB(),
-		[]string{}, []string{"modify"}), api.UpdateUserRoute())
+	r.GET("/users", authmw.X(api.DB(), authmw.Config{
+		Scope:  []string{"users.read"},
+		Realms: []string{"users.read"},
+	}), api.GetUsersRoute())
 
-	r.GET("/users", authmw.AuthenticateBearer(config.SECRET, api.DB(),
-		[]string{"users.read"}, []string{}), api.GetUsersRoute())
+	r.POST("/client", authmw.X(api.DB(), authmw.Config{
+		Scope:  []string{"clients.create"},
+		Realms: []string{"clients.create"},
+	}), api.CreateClientRoute())
 
-	r.POST("/client", authmw.AuthenticateUser(config.SECRET, api.DB(),
-		"clients.create"), api.CreateClientRoute())
+	r.GET("/clients", authmw.X(api.DB(), authmw.Config{
+		Scope:  []string{"clients.read"},
+		Realms: []string{"clients.read"},
+	}), api.GetClientsRoute())
 
-	r.GET("/clients", authmw.AuthenticateBearer(config.SECRET, api.DB(),
-		[]string{"clients.read"}, []string{}), api.GetClientsRoute())
+	r.DELETE("/client/:id", authmw.X(api.DB(), authmw.Config{
+		Scope:  []string{"clients.delete"},
+		Realms: []string{"clients.delete"},
+	}), api.DeleteClientRoute())
 
-	r.DELETE("/client/:id", authmw.AuthenticateUser(config.SECRET, api.DB()),
-		api.DeleteClientRoute())
-
-	// Status check.
+	// Status.
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(http.StatusOK, "ok")
 	})

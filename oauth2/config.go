@@ -12,7 +12,6 @@ type Config struct {
 	MONGO_URI        string
 	DB_NAME          string
 	NOTIF_EMAIL_ADDR string
-	SECRET           string
 	PORT             string
 	WEBSMTP          string
 }
@@ -24,7 +23,6 @@ func GetDefaultConfig() (c Config) {
 	c.MONGO_URI = ""
 	c.DB_NAME = "testing"
 	c.NOTIF_EMAIL_ADDR = "no-reply.notifications@ufosc.org"
-	c.SECRET = "369369369369369369"
 	c.PORT = "8080"
 	c.WEBSMTP = "http://localhost:3001"
 	return c
@@ -49,9 +47,6 @@ func GetConfig() Config {
 	}
 	if addr := os.Getenv("NOTIF_EMAIL_ADDR"); addr != "" {
 		c.NOTIF_EMAIL_ADDR = addr
-	}
-	if secret := os.Getenv("SECRET"); secret != "" {
-		c.SECRET = secret
 	}
 	if port := os.Getenv("PORT"); port != "" {
 		c.PORT = port
