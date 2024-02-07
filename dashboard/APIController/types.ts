@@ -13,8 +13,9 @@ export type TypeSignupBody = {
 
 export interface APIResponse {
   message?: string;
-  jwt?: string;
+  token?: string;
   error?: string;
+  error_description?: string;
 }
 
 export interface TypeGetClientResponse {
