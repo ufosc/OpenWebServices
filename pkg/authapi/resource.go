@@ -149,11 +149,30 @@ func (cntrl *DefaultAPIController) GetUsersRoute() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusInternalServerError, gin.H{
+		// userPublic is a user without their password field.
+		type userPublic struct {
+			ID        string   `json:"id"`
+			Email     string   `json:"email"`
+			FirstName string   `json:"first_name"`
+			LastName  string   `json:"last_name"`
+			Realms    []string `json:"realms"`
+			CreatedAt int64    `json:"created_at"`
+		}
+
+		// Remove password field.
+		up := []userPublic{}
+		for _, user := range docs {
+			up = append(up, userPublic{
+				user.ID, user.Email, user.FirstName,
+				user.LastName, user.Realms, user.CreatedAt,
+			})
+		}
+
+		c.JSON(http.StatusOK, gin.H{
 			"message":     "success",
-			"count":       20,
+			"count":       len(up),
 			"total_count": count,
-			"users":       docs,
+			"users":       up,
 		})
 	}
 }
@@ -387,11 +406,33 @@ func (cntrl *DefaultAPIController) GetClientsRoute() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusInternalServerError, gin.H{
+		// clientPublic is a client without its private key.
+		type clientPublic struct {
+			ID           string   `json:"id"`
+			Name         string   `json:"name"`
+			Description  string   `json:"description"`
+			ResponseType string   `json:"response_type"`
+			RedirectURI  string   `json:"redirect_uri"`
+			Scope        []string `json:"scope"`
+			CreatedAt    int64    `json:"created_at"`
+			TTL          int64    `json:"ttl"`
+		}
+
+		// Remove private key.
+		cp := []clientPublic{}
+		for _, client := range docs {
+			cp = append(cp, clientPublic{
+				client.ID, client.Name, client.Description,
+				client.ResponseType, client.RedirectURI,
+				client.Scope, client.CreatedAt, client.TTL,
+			})
+		}
+
+		c.JSON(http.StatusOK, gin.H{
 			"message":     "success",
-			"count":       20,
+			"count":       len(cp),
 			"total_count": count,
-			"clients":     docs,
+			"clients":     cp,
 		})
 	}
 }
