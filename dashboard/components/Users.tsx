@@ -1,5 +1,10 @@
+'use client'
+
 import TableView from './TableView'
-import { useState } from 'react'
+import { GetUsers, IsAPISuccess } from '@/APIController/API'
+import { useState, useEffect } from 'react'
+import { useCookies } from 'next-client-cookies'
+import { useRouter } from 'next/navigation'
 
 // Data table headers.
 const headers = [
@@ -19,25 +24,50 @@ const headers = [
     key: 'realms',
     header: 'Realms'
   },
+  {
+    key: 'created_at',
+    header: 'Created at'
+  }
 ]
 
+type UsersResponse = {
+  users: any[],
+}
+
 export default function Users() {
-    const [rows, setRows] = useState([
-      {
-        id: '0',
-        email: 'testing@ufosc.org',
-        first_name: 'Dummy',
-        last_name: 'User',
-        realms: ['clients.read', 'clients.create']
-      },
-      {
-        id: '1',
-        email: 'testing2@ufosc.org',
-        first_name: 'Dummy',
-        last_name: 'User 2',
-        realms: ['clients.read', 'clients.create']
+  const router = useRouter()
+  const cookies = useCookies()
+  const token = cookies.get('ows-access-token')
+  if (typeof token === "undefined") {
+    router.push("/authorize")
+    return
+  }
+
+  const [rows, setRows] = useState<any>([])
+  useEffect(() => {
+    GetUsers(0, token as string).then((res) => {
+      if (!IsAPISuccess(res)) {
+        cookies.remove('ows-access-tokens')
+        router.push('/authorize')
+        return
       }
-    ])
+
+      setRows((res as UsersResponse).users.map(user => {
+        let text = ""
+        for (let i = 0; i < user.realms.length; ++i) {
+          text += user.realms[i]
+          if (i + 1 !== user.realms.length) {
+            text += ", "
+          }
+        }
+        user.realms = text
+        return user
+      }))
+    }).catch((err) => {
+      cookies.remove('ows-access-tokens')
+      router.push("/authorize")
+    })
+  }, [])
 
   return (
     <TableView
@@ -46,6 +76,7 @@ export default function Users() {
       title="Users"
       description="Users are individuals who have signed up for an OSC
       account and have and successfully verified their email address."
+      hasAddButton={false}
     />
   )
 }
