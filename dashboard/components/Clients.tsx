@@ -1,5 +1,10 @@
+'use client'
+
 import TableView from './TableView'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { GetClients, IsAPISuccess } from '@/APIController/API'
+import { useCookies } from 'next-client-cookies'
 
 // Data table headers.
 const headers = [
@@ -20,22 +25,53 @@ const headers = [
     header: 'Scope',
   },
   {
+    key: 'created_at',
+    header: 'Created at',
+  },
+  {
     key: 'ttl',
     header: 'TTL',
   },
 ]
 
+type ClientResponse = {
+  clients: any[],
+}
+
 export default function Clients() {
-  const [rows, setRows] = useState([
-    {
-      id: '0',
-      name: 'Dummy Client',
-      response_type: 'token',
-      redirect_uri: "https://google.com",
-      scope: "email, public",
-      ttl: "176000"
-    }
-  ])
+  const router = useRouter()
+  const cookies = useCookies()
+  const token = cookies.get('ows-access-token')
+  if (typeof token === "undefined") {
+    router.push("/authorize")
+    return
+  }
+
+  const [rows, setRows] = useState<any>([])
+  useEffect(() => {
+    GetClients(0, token as string).then((res) => {
+      if (!IsAPISuccess(res)) {
+        cookies.remove('ows-access-tokens')
+        router.push('/authorize')
+        return
+      }
+
+      setRows((res as ClientResponse).clients.map(client => {
+        let text = ""
+        for (let i = 0; i < client.scope.length; ++i) {
+          text += client.scope[i]
+          if (i + 1 !== client.scope.length) {
+            text += ", "
+          }
+        }
+        client.scope = text
+        return client
+      }))
+    }).catch((err) => {
+      cookies.remove('ows-access-tokens')
+      router.push('/authorize')
+    })
+  }, [])
 
   return (
     <TableView
@@ -46,6 +82,7 @@ export default function Clients() {
       authorized to use OSC accounts for authentication. They request
       users for permission and, if granted, may securely access
       their private data."
+      hasAddButton={true}
     />
   )
 }

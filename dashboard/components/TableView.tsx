@@ -1,16 +1,31 @@
 // @ts-nocheck
+'use client'
+
 import { TrashCan } from '@carbon/icons-react'
 import {
   DataTable, Table, TableHead, TableRow,
   TableHeader, TableBody, TableCell,
   TableContainer, TableToolbar, TableBatchAction,
   TableBatchActions, TableToolbarContent, Button,
-  TableToolbarSearch, TableSelectAll, TableSelectRow
+  TableSelectAll, TableSelectRow,
 } from '@carbon/react'
 
 export default function TableView(props: {
-  rows: any, headers: any, title: string, description: string
+  rows: any, headers: any, title: string,
+  description: string, hasAddButton: boolean,
 }) {
+
+  const addButton = () => {
+    if (!props.hasAddButton) {
+      return null
+    }
+    return (
+      <TableToolbarContent>
+        <Button>Create</Button>
+      </TableToolbarContent>
+    )
+  }
+
   return (
     <DataTable rows={props.rows} headers={props.headers} isSortable>
       {({
@@ -40,8 +55,11 @@ export default function TableView(props: {
         return (
           <TableContainer title={props.title} description={props.description}>
             <TableToolbar {...getToolbarProps()}>
+              { addButton() }
               <TableBatchActions {...batchActionProps}>
-                <TableBatchAction tabIndex={batchActionProps.shouldShowBatchActions ? 0 : -1} renderIcon={TrashCan}>
+                <TableBatchAction
+                  tabIndex={batchActionProps.shouldShowBatchActions ? 0 : -1}
+                  renderIcon={TrashCan}>
                   Delete
                 </TableBatchAction>
               </TableBatchActions>

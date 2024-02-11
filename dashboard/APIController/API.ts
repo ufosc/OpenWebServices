@@ -17,6 +17,22 @@ export const GetClient = (id : string) => {
   })
 }
 
+export const GetClients = (page : number, token : string) => {
+  return new Promise((resolve: Function, reject: Function) => {
+    axios.get(`${RootURL}/clients`, {
+      headers: { 'Authorization': `Bearer ${token}`}})
+      .then((res : AxiosResponse) => {
+        resolve(res.data)
+    }).catch((err : AxiosError) => {
+      if (err.response && IsAPIFailure(err.response.data)) {
+        resolve(err.response.data)
+        return
+      }
+      reject(err)
+    })
+  })
+}
+
 export const PostSignin = (body: TypeSigninBody) => {
   return new Promise((resolve: Function, reject: Function) => {
     axios.post(`${RootURL}/auth/signin`, body)
@@ -61,6 +77,22 @@ export const GetUser = (token : string) => {
 	  return
 	}
 	reject(err)
+      })
+  })
+}
+
+export const GetUsers = (page : number, token : string) => {
+  return new Promise((resolve: Function, reject: Function) => {
+    axios.get(`${RootURL}/users`, { headers: { 'Authorization': `Bearer ${token}` } })
+      .then((res : AxiosResponse) => {
+        resolve(res.data)
+      })
+      .catch((err : AxiosError) => {
+        if (err.response && IsAPIFailure(err.response.data)) {
+          resolve(err.response.data)
+          return
+        }
+        reject(err)
       })
   })
 }
