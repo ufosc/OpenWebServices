@@ -109,8 +109,9 @@ func X(db authdb.Database, config Config) gin.HandlerFunc {
 
 		// Verify associated client exists.
 		clientExists := authdb.ClientModel{
-			ID:    "0",
-			Scope: []string{"dashboard", "users.modify"},
+			ID: "0",
+			Scope: []string{"dashboard", "users.modify",
+				"users.read", "clients.read"},
 		}
 
 		if tkExists.ClientID != "0" {
