@@ -19,7 +19,7 @@ export const GetClient = (id : string) => {
 
 export const GetClients = (page : number, token : string) => {
   return new Promise((resolve: Function, reject: Function) => {
-    axios.get(`${RootURL}/clients`, {
+    axios.get(`${RootURL}/clients?page=${page}`, {
       headers: { 'Authorization': `Bearer ${token}`}})
       .then((res : AxiosResponse) => {
         resolve(res.data)
@@ -83,7 +83,7 @@ export const GetUser = (token : string) => {
 
 export const GetUsers = (page : number, token : string) => {
   return new Promise((resolve: Function, reject: Function) => {
-    axios.get(`${RootURL}/users`, { headers: { 'Authorization': `Bearer ${token}` } })
+    axios.get(`${RootURL}/users?page=${page}`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then((res : AxiosResponse) => {
         resolve(res.data)
       })
