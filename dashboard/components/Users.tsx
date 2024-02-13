@@ -5,6 +5,10 @@ import { GetUsers, IsAPISuccess } from '@/APIController/API'
 import { useState, useEffect } from 'react'
 import { useCookies } from 'next-client-cookies'
 import { useRouter } from 'next/navigation'
+import { Loading } from '@carbon/react'
+
+// IBM Carbon is serious dogshit.
+import PaginationNav from '@carbon/react/lib/components/PaginationNav/PaginationNav'
 
 // Data table headers.
 const headers = [
@@ -32,6 +36,7 @@ const headers = [
 
 type UsersResponse = {
   users: any[],
+  total_count: number,
 }
 
 export default function Users() {
@@ -43,9 +48,13 @@ export default function Users() {
     return
   }
 
+  const [page, setPage] = useState<number>(0)
+  const [numPages, setNumPages] = useState<number>(1)
   const [rows, setRows] = useState<any>([])
+  const [isLoading, setIsLoading] = useState<boolean>(true)
+
   useEffect(() => {
-    GetUsers(0, token as string).then((res) => {
+    GetUsers(page, token as string).then((res) => {
       if (!IsAPISuccess(res)) {
         cookies.remove('ows-access-tokens')
         router.push('/authorize')
@@ -63,20 +72,44 @@ export default function Users() {
         user.realms = text
         return user
       }))
+
+      setIsLoading(false)
+
+      const pageCount = Math.ceil((res as UsersResponse).total_count / 20)
+      if (pageCount !== numPages && pageCount > 0) {
+        setNumPages(pageCount)
+      }
+
     }).catch((err) => {
       cookies.remove('ows-access-tokens')
       router.push("/authorize")
     })
-  }, [])
+  }, [page])
+
+  const pageChange = (newPage : number) => {
+    if (newPage === page) {
+      return
+    }
+    setIsLoading(true)
+    setPage(newPage)
+  }
 
   return (
-    <TableView
-      rows={rows}
-      headers={headers}
-      title="Users"
-      description="Users are individuals who have signed up for an OSC
-      account and have and successfully verified their email address."
-      hasAddButton={false}
-    />
+    <>
+      {
+	(isLoading) ?
+	  (<Loading id="decoration--loading" withOverlay={true} />)
+	  : null
+      }
+      <TableView
+        rows={rows}
+        headers={headers}
+        title="Users"
+        description="Users are individuals who have signed up for an OSC
+        account and have and successfully verified their email address."
+        hasAddButton={false}
+      />
+      <PaginationNav itemsShown={5} totalItems={numPages} onChange={pageChange} />
+    </>
   )
 }
