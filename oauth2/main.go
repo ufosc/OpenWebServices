@@ -46,13 +46,18 @@ func main() {
 		api.AuthorizationRoute())
 
 	// Resources.
-	xEmpty := authmw.X(api.DB(), authmw.Config{})
 	r.GET("/client/:id", api.GetClientRoute())
-	r.GET("/user", xEmpty, api.GetUserRoute())
+	r.GET("/user", authmw.X(api.DB(), authmw.Config{}),
+		api.GetUserRoute())
 
 	r.PUT("/user", authmw.X(api.DB(), authmw.Config{
 		Scope: []string{"users.modify"},
 	}), api.UpdateUserRoute())
+
+	r.DELETE("/user/:id", authmw.X(api.DB(), authmw.Config{
+		Scope: []string{"users.delete"},
+		Realms: []string{"users.delete"},
+	}), api.DeleteUserRoute())
 
 	r.GET("/users", authmw.X(api.DB(), authmw.Config{
 		Scope:  []string{"users.read"},
