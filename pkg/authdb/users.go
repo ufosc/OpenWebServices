@@ -37,6 +37,7 @@ type UserController interface {
 	FindByID(string) (UserModel, error)
 	Update(UserModel) (int64, error)
 	Create(UserModel) (string, error)
+	DeleteByID(string) error
 	Batch(n, skip int64) ([]UserModel, error)
 	Count() (int64, error)
 
@@ -160,6 +161,25 @@ func (cc *MongoUserController) Create(usr UserModel) (string, error) {
 	}
 
 	return res.InsertedID.(primitive.ObjectID).Hex(), nil
+}
+
+// DeleteByID deletes a user by their ID.
+func (cc *MongoUserController) DeleteByID(id string) error {
+	if cc.state == nil || cc.state.Stopped.Load() || cc.ccoll == nil {
+		return ErrClosed
+	}
+
+	cc.state.Wg.Add(1)
+	defer cc.state.Wg.Done()
+
+	// Extract primitive object ID.
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+
+	_, err = cc.ccoll.DeleteOne(context.TODO(), bson.D{{Key: "_id", Value: objID}})
+	return err
 }
 
 // Page returns users in batches, with each p >= 0 returning the subsequent batch of 20 users.
