@@ -17,6 +17,7 @@ type APIController interface {
 
 	GetUserRoute() gin.HandlerFunc
 	UpdateUserRoute() gin.HandlerFunc
+	DeleteUserRoute() gin.HandlerFunc
 	GetUsersRoute() gin.HandlerFunc
 	ResetPwdRoute() gin.HandlerFunc
 

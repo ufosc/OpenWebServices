@@ -341,6 +341,51 @@ func (cntrl *DefaultAPIController) CreateClientRoute() gin.HandlerFunc {
 	}
 }
 
+// DeleteUserRoute returns the gin middleware for deleting a user.
+func (cntrl *DefaultAPIController) DeleteUserRoute() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID := c.Param("id")
+		userAny, _ := c.Get("user")
+		user, _ := userAny.(authdb.UserModel)
+
+		_, err := cntrl.db.Users().FindByID(userID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "user not found",
+			})
+			return
+		}
+
+		// Whether the user can delete any user.
+		hasDeletionRealm := false
+		for _, realm := range user.Realms {
+			if realm == "users.delete" {
+				hasDeletionRealm = true
+				break
+			}
+		}
+
+		if !hasDeletionRealm {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "not authorized to delete other users",
+			})
+			return
+		}
+
+		err = cntrl.db.Users().DeleteByID(userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "could not delete user at this time, please try again later",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "user deleted successfully",
+		})
+	}
+}
+
 // DeleteClientRoute returns the gin middleware for deleting a client.
 func (cntrl *DefaultAPIController) DeleteClientRoute() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -356,7 +401,16 @@ func (cntrl *DefaultAPIController) DeleteClientRoute() gin.HandlerFunc {
 			return
 		}
 
-		if clientExists.Owner != user.ID {
+		// Whether the user can delete any client.
+		hasDeletionRealm := false
+		for _, realm := range user.Realms {
+			if realm == "clients.delete" {
+				hasDeletionRealm = true
+				break
+			}
+		}
+
+		if clientExists.Owner != user.ID && !hasDeletionRealm {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": "client does not belong to this user",
 			})
