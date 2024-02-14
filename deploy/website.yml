@@ -17,7 +17,7 @@ spec:
       containers:
         - name: club-website
           #image: osc-website
-          image: us-central1-docker.pkg.dev/innate-concept-409007/docker-repo/club-website:v1.0.2b
+          image: us-central1-docker.pkg.dev/innate-concept-409007/docker-repo/club-website:v1.0.3
           #imagePullPolicy: Never
           env:
             - name: MONGO_URI
