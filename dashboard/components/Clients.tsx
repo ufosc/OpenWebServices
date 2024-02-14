@@ -3,9 +3,9 @@
 import TableView from './TableView'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { GetClients, IsAPISuccess } from '@/APIController/API'
+import { DeleteClient, GetClients, IsAPIFailure, IsAPISuccess } from '@/APIController/API'
 import { useCookies } from 'next-client-cookies'
-import { Loading } from '@carbon/react'
+import { Loading, InlineNotification } from '@carbon/react'
 import PaginationNav from '@carbon/react/lib/components/PaginationNav/PaginationNav'
 
 // Data table headers.
@@ -39,6 +39,7 @@ const headers = [
 type ClientResponse = {
   clients: any[],
   total_count: number,
+  count: number,
 }
 
 export default function Clients() {
@@ -54,8 +55,11 @@ export default function Clients() {
   const [numPages, setNumPages] = useState<number>(1)
   const [rows, setRows] = useState<any>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [hasNotif, setHasNotif] = useState<boolean>(false)
+  const [notifData, setNotifData] = useState<{title: string,
+    subtitle: string }>({title: "", subtitle: ""})
 
-  useEffect(() => {
+  const fetchTable = () => {
     GetClients(page, token as string).then((res) => {
       if (!IsAPISuccess(res)) {
         cookies.remove('ows-access-tokens')
@@ -76,7 +80,6 @@ export default function Clients() {
       }))
 
       setIsLoading(false)
-
       const pageCount = Math.ceil((res as ClientResponse).total_count / 20)
       if (pageCount !== numPages && pageCount > 0) {
         setNumPages(pageCount)
@@ -86,7 +89,9 @@ export default function Clients() {
       cookies.remove('ows-access-tokens')
       router.push('/authorize')
     })
-  }, [page])
+  }
+
+  useEffect(fetchTable, [page])
 
   const pageChange = (newPage : number) => {
     if (newPage === page) {
@@ -96,8 +101,45 @@ export default function Clients() {
     setPage(newPage)
   }
 
+  const onDelete = async (selectedRows : { id: string }[]) => {
+    setIsLoading(true)
+    let hasError = false
+    for (let i = 0; i < selectedRows.length; ++i) {
+      await DeleteClient(selectedRows[i].id, token as string).then((res) => {
+        if (IsAPIFailure(res)) {
+          hasError = true
+        }
+      }).catch(err => { hasError = true })
+    }
+
+    if (hasError) {
+      setNotifData({
+        title: "Error Deleting Clients",
+        subtitle: "You are not authorized to delete clients"
+      })
+      setHasNotif(true)
+      setTimeout(() => { setHasNotif(false) }, 5000)
+    }
+
+    fetchTable()
+    setIsLoading(false)
+  }
+
   return (
     <>
+      {
+        (hasNotif) ? (
+          <InlineNotification
+            kind="error"
+            onClose={() => setHasNotif(false) }
+            onCloseButtonClick={() => setHasNotif(false)}
+            statusIconDescription="notification"
+            subtitle={notifData.subtitle}
+            title={notifData.title}
+            style={{ position: "fixed", bottom: 5, left: 5}}
+          />
+        ) : null
+      }
       {
         (isLoading) ?
           (<Loading id='decoration--landing' withOverlay={true} />)
@@ -112,6 +154,7 @@ export default function Clients() {
         users for permission and, if granted, may securely access
         their private data."
         hasAddButton={true}
+        onDelete={onDelete}
       />
       <PaginationNav itemsShown={5} totalItems={numPages} onChange={pageChange} />
     </>

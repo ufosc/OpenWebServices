@@ -13,6 +13,7 @@ import {
 export default function TableView(props: {
   rows: any, headers: any, title: string,
   description: string, hasAddButton: boolean,
+  onDelete: Function,
 }) {
 
   const addButton = () => {
@@ -37,7 +38,8 @@ export default function TableView(props: {
         getBatchActionProps,
         selectRow,
         getToolbarProps,
-        getSelectionProps
+        getSelectionProps,
+        selectedRows,
       }) => {
 
         const batchActionProps = {
@@ -59,7 +61,11 @@ export default function TableView(props: {
               <TableBatchActions {...batchActionProps}>
                 <TableBatchAction
                   tabIndex={batchActionProps.shouldShowBatchActions ? 0 : -1}
-                  renderIcon={TrashCan}>
+                  renderIcon={TrashCan}
+                  onClick={() => {
+                    props.onDelete(selectedRows)
+                    getBatchActionProps().onCancel()
+                  }}>
                   Delete
                 </TableBatchAction>
               </TableBatchActions>
