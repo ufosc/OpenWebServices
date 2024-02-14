@@ -17,6 +17,22 @@ export const GetClient = (id : string) => {
   })
 }
 
+export const DeleteClient = (id : string, token : string) => {
+  return new Promise((resolve: Function, reject: Function) => {
+    axios.delete(`${RootURL}/client/${id}`, { headers: {
+      'Authorization': `Bearer ${token}`}}).then((res : AxiosResponse) => {
+        resolve(res.data)
+      })
+      .catch((err: AxiosError) => {
+        if (err.response && IsAPIFailure(err.response.data)) {
+          resolve(err.response.data)
+          return
+        }
+        reject(err)
+      })
+  })
+}
+
 export const GetClients = (page : number, token : string) => {
   return new Promise((resolve: Function, reject: Function) => {
     axios.get(`${RootURL}/clients?page=${page}`, {
@@ -98,10 +114,10 @@ export const GetUsers = (page : number, token : string) => {
 }
 
 export const UpdateUser = (firstName : string, lastName : string,
-  jwt : string) => {
+  token : string) => {
   return new Promise((resolve: Function, reject: Function) => {
     axios.put(`${RootURL}/user`, { first_name: firstName, last_name: lastName },
-      { headers: { 'Authorization': `Bearer ${jwt}` }})
+      { headers: { 'Authorization': `Bearer ${token}` }})
       .then((res : AxiosResponse) => {
 	resolve(res.data)
       })
@@ -111,6 +127,22 @@ export const UpdateUser = (firstName : string, lastName : string,
 	  return
 	}
 	reject(err)
+      })
+  })
+}
+
+export const DeleteUser = (id : string, token : string) => {
+  return new Promise((resolve: Function, reject: Function) => {
+    axios.delete(`${RootURL}/user/${id}`, { headers: {
+      'Authorization': `Bearer ${token}`}}).then((res : AxiosResponse) => {
+        resolve(res.data)
+      })
+      .catch((err : AxiosError) => {
+        if (err.response && IsAPIFailure(err.response.data)) {
+          resolve(err.response.data)
+          return
+        }
+        reject(err)
       })
   })
 }

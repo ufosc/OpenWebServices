@@ -1,11 +1,11 @@
 'use client'
 
 import TableView from './TableView'
-import { GetUsers, IsAPISuccess } from '@/APIController/API'
+import { GetUsers, DeleteUser, IsAPISuccess, IsAPIFailure } from '@/APIController/API'
 import { useState, useEffect } from 'react'
 import { useCookies } from 'next-client-cookies'
 import { useRouter } from 'next/navigation'
-import { Loading } from '@carbon/react'
+import { Loading, InlineNotification } from '@carbon/react'
 
 // IBM Carbon is serious dogshit.
 import PaginationNav from '@carbon/react/lib/components/PaginationNav/PaginationNav'
@@ -37,6 +37,7 @@ const headers = [
 type UsersResponse = {
   users: any[],
   total_count: number,
+  count: number,
 }
 
 export default function Users() {
@@ -52,8 +53,11 @@ export default function Users() {
   const [numPages, setNumPages] = useState<number>(1)
   const [rows, setRows] = useState<any>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [hasNotif, setHasNotif] = useState<boolean>(false)
+  const [notifData, setNotifData] = useState<{title: string,
+    subtitle: string}>({title: "", subtitle: ""})
 
-  useEffect(() => {
+  const fetchTable = () => {
     GetUsers(page, token as string).then((res) => {
       if (!IsAPISuccess(res)) {
         cookies.remove('ows-access-tokens')
@@ -74,7 +78,6 @@ export default function Users() {
       }))
 
       setIsLoading(false)
-
       const pageCount = Math.ceil((res as UsersResponse).total_count / 20)
       if (pageCount !== numPages && pageCount > 0) {
         setNumPages(pageCount)
@@ -84,7 +87,9 @@ export default function Users() {
       cookies.remove('ows-access-tokens')
       router.push("/authorize")
     })
-  }, [page])
+  }
+
+  useEffect(fetchTable, [page])
 
   const pageChange = (newPage : number) => {
     if (newPage === page) {
@@ -94,8 +99,45 @@ export default function Users() {
     setPage(newPage)
   }
 
+  const onDelete = async (selectedRows : { id: string }[]) => {
+    setIsLoading(true)
+    let hasError = false
+    for (let i = 0; i < selectedRows.length; ++i) {
+      await DeleteUser(selectedRows[i].id, token as string).then((res) => {
+        if (IsAPIFailure(res)) {
+          hasError = true
+        }
+      }).catch(err => { hasError = true })
+    }
+
+    if (hasError) {
+      setNotifData({
+        title: "Error Deleting Users",
+        subtitle: "You are not authorized to delete users"
+      })
+      setHasNotif(true)
+      setTimeout(() => { setHasNotif(false) }, 5000)
+    }
+
+    fetchTable()
+    setIsLoading(false)
+  }
+
   return (
     <>
+      {
+        (hasNotif) ? (
+          <InlineNotification
+            kind="error"
+            onClose={() => setHasNotif(false) }
+            onCloseButtonClick={() => setHasNotif(false)}
+            statusIconDescription="notification"
+            subtitle={notifData.subtitle}
+            title={notifData.title}
+            style={{ position: "fixed", bottom: 5, left: 5}}
+          />
+        ) : null
+      }
       {
 	(isLoading) ?
 	  (<Loading id="decoration--loading" withOverlay={true} />)
@@ -108,6 +150,7 @@ export default function Users() {
         description="Users are individuals who have signed up for an OSC
         account and have and successfully verified their email address."
         hasAddButton={false}
+        onDelete={onDelete}
       />
       <PaginationNav itemsShown={5} totalItems={numPages} onChange={pageChange} />
     </>
