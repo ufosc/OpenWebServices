@@ -46,10 +46,11 @@ export default function Clients() {
   const router = useRouter()
   const cookies = useCookies()
   const token = cookies.get('ows-access-token')
-  if (typeof token === "undefined") {
-    router.push("/authorize")
-    return
-  }
+  useEffect(() => {
+    if (typeof token === "undefined") {
+      router.push("/authorize")
+    }
+  }, [])
 
   const [page, setPage] = useState<number>(0)
   const [numPages, setNumPages] = useState<number>(1)

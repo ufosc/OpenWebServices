@@ -1,4 +1,4 @@
-module github.com/ufosc/OpenWebServices/oauth2
+module github.com/ufosc/OpenWebServices/oauth2 v0.1.4-alpha
 
 go 1.20
 

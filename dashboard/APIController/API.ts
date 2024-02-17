@@ -1,7 +1,7 @@
 import axios, { AxiosResponse, AxiosError } from 'axios'
 import { TypeSigninBody, TypeSignupBody, APIResponse } from './types'
 
-const RootURL = "http://localhost:8080"
+const RootURL = "https://api.ufosc.org"
 
 export const GetClient = (id : string) => {
   return new Promise((resolve: Function, reject: Function) => {

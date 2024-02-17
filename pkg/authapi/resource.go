@@ -55,6 +55,7 @@ func (cntrl *DefaultAPIController) GetUserRoute() gin.HandlerFunc {
 			"user_id":    user.ID,
 			"first_name": user.FirstName,
 			"last_name":  user.LastName,
+			"realms":     user.Realms,
 		})
 	}
 }

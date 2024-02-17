@@ -16,7 +16,7 @@ func (cntrl *DefaultAPIController) SendVerification(id, email string) bool {
 		From:    cntrl.address,
 		To:      []string{email},
 		Subject: "UF Open Source Club: Verify Your Email Address",
-		Body:    "go to api.testing.ufosc.org/auth/verify/" + id,
+		Body:    "go to https://api.ufosc.org/auth/verify/" + id,
 	})
 
 	if err != nil {

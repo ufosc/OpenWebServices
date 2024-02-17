@@ -9,8 +9,8 @@ import { useCookies } from 'next-client-cookies'
 import { useRouter } from 'next/navigation'
 
 const PermissionsForm = (props: { client: any, state: string }) => {
-  const cookies = useCookies()
   const router = useRouter()
+  const cookies = useCookies()
 
   const headingColor = () => {
     const { theme } = useTheme()

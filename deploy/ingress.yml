@@ -6,8 +6,8 @@ spec:
   domains:
     - ufosc.org
     - www.ufosc.org
-    - api.testing.ufosc.org
-    - auth.testing.ufosc.org
+    - api.ufosc.org
+    - auth.ufosc.org
 ---
 apiVersion: networking.gke.io/v1beta1
 kind: FrontendConfig
@@ -48,7 +48,7 @@ spec:
                 name: osc-website-service
                 port:
                   number: 3002
-    - host: api.testing.ufosc.org
+    - host: api.ufosc.org
       http:
         paths:
           - pathType: Prefix
@@ -58,7 +58,7 @@ spec:
                 name: oauth2-service-server
                 port:
                   number: 8080
-    - host: auth.testing.ufosc.org
+    - host: auth.ufosc.org
       http:
         paths:
           - pathType: Prefix
