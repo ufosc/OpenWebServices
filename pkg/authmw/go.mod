@@ -1,4 +1,4 @@
-module github.com/ufosc/OpenWebServices/pkg/authmw
+module github.com/ufosc/OpenWebServices/pkg/authmw v0.1.4-alpha
 
 go 1.20
 

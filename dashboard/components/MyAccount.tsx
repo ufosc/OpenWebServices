@@ -2,7 +2,7 @@
 
 import { UpdateUser, IsAPISuccess, IsAPIFailure } from '@/APIController/API'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useCookies } from 'next-client-cookies'
 import { Loading } from '@carbon/react'
 import { Edit, EditOff } from '@carbon/icons-react'
@@ -27,13 +27,14 @@ const editButton = (isEditing : boolean, setIsEditing : Function) => {
 }
 
 export default function MyAccount({ user } : any) {
-  const cookies = useCookies()
   const router = useRouter()
+  const cookies = useCookies()
   const token = cookies.get('ows-access-token')
-  if (typeof token === "undefined") {
-    router.push("/authorize")
-    return
-  }
+  useEffect(() => {
+    if (typeof token === "undefined") {
+      router.push("/authorize")
+    }
+  }, [])
 
   const headingColor = () => {
     const { theme } = useTheme()

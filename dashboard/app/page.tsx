@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useCookies } from 'next-client-cookies'
 import MyAccount from '@/components/MyAccount'
 import { GetUser, IsAPISuccess } from '@/APIController/API'
@@ -15,27 +15,30 @@ type User = {
 }
 
 export default function Page() {
+  const router = useRouter()
   const cookies = useCookies()
   const token = cookies.get('ows-access-token')
-  const router = useRouter()
-  if (typeof token === "undefined") {
-    router.push("/authorize")
-  }
-
   const [user, setUser] = useState<User | null>(null)
-  if (user === null) {
-    GetUser(token as string).then((res) => {
-      if (!IsAPISuccess(res)) {
+
+  useEffect(() => {
+    if (typeof token === "undefined") {
+      router.push("/authorize")
+    }
+
+    if (user === null) {
+      GetUser(token as string).then((res) => {
+        if (!IsAPISuccess(res)) {
+          cookies.remove('ows-access-token')
+          router.push("/authorize")
+          return
+        }
+        setUser(res as User)
+      }).catch((err) => {
         cookies.remove('ows-access-token')
         router.push("/authorize")
-        return
-      }
-      setUser(res as User)
-    }).catch((err) => {
-      cookies.remove('ows-access-token')
-      router.push("/authorize")
-    })
-  }
+      })
+    }
+  }, [])
 
   if (user === null) {
     return (<Loading withOverlay={true} />)
@@ -52,8 +55,8 @@ export default function Page() {
 	</TabList>
 	<TabPanels>
 	  <TabPanel><MyAccount user={user} /></TabPanel>
-	  <TabPanel><Clients /></TabPanel>
-	  <TabPanel><Users /></TabPanel>
+	  <TabPanel>{(user.realms?.includes("clients.read")) ? (<Clients />) : null }</TabPanel>
+	  <TabPanel>{ (user.realms?.includes("users.read")) ? (<Users />) : null }</TabPanel>
 	</TabPanels>
       </Tabs>
     </div>

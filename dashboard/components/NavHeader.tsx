@@ -9,8 +9,8 @@ import { Header, HeaderContainer, HeaderName, HeaderGlobalBar,
   HeaderGlobalAction, SkipToContent, useTheme } from '@carbon/react'
 
 const NavHeader = (props : { setTheme: Function }) => {
-  const cookies = useCookies()
   const router = useRouter()
+  const cookies = useCookies()
   const token = cookies.get('ows-access-token')
 
   const themeSelector = () => {
@@ -38,7 +38,7 @@ const NavHeader = (props : { setTheme: Function }) => {
       <Header aria-label="OpenWebServices">
         <SkipToContent />
         <HeaderName href="/" prefix="UF">OpenWebServices</HeaderName>
-	<p>v0.1.0-alpha</p>
+	<p>v0.1.4-alpha</p>
 	<HeaderGlobalBar>
 	  { themeSelector() }
 	  {

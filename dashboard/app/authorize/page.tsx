@@ -13,8 +13,8 @@ import Permissions from './permissions'
 import './style.scss'
 
 export default function Page() {
-  const cookies = useCookies()
   const router = useRouter()
+  const cookies = useCookies()
   const token = cookies.get('ows-access-token')
   const [view, setView] = useState<"signin" | "signup">("signin")
 
