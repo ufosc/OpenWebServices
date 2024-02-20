@@ -1,4 +1,4 @@
-module github.com/ufosc/OpenWebServices/pkg/authapi v0.1.4-alpha
+module github.com/ufosc/OpenWebServices/pkg/authapi
 
 go 1.20
 
