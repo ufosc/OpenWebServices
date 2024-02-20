@@ -1,4 +1,4 @@
-module github.com/ufosc/OpenWebServices/pkg/authdb v0.1.4-alpha
+module github.com/ufosc/OpenWebServices/pkg/authdb
 
 go 1.20
 

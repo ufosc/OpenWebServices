@@ -1,4 +1,4 @@
-module github.com/ufosc/OpenWebServices/pkg/websmtp v0.1.4-alpha
+module github.com/ufosc/OpenWebServices/pkg/websmtp
 
 go 1.20
 

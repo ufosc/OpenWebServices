@@ -1,4 +1,4 @@
-module github.com/ufosc/OpenWebServices/pkg/common v0.1.4-alpha
+module github.com/ufosc/OpenWebServices/pkg/common
 
 go 1.20
 
