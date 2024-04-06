@@ -114,6 +114,7 @@ func X(db authdb.Database, config Config) gin.HandlerFunc {
 				"dashboard", "users.modify",
 				"users.read", "users.delete",
 				"clients.read", "clients.delete",
+				"clients.create",
 			},
 		}
 
