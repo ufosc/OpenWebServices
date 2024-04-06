@@ -1,7 +1,7 @@
 import axios, { AxiosResponse, AxiosError } from 'axios'
 import { TypeSigninBody, TypeSignupBody, APIResponse } from './types'
 
-const RootURL = "https://api.ufosc.org"
+const RootURL = "http://localhost:8080"
 
 export const GetClient = (id : string) => {
   return new Promise((resolve: Function, reject: Function) => {
@@ -46,6 +46,22 @@ export const GetClients = (page : number, token : string) => {
       }
       reject(err)
     })
+  })
+}
+
+export const PostCreateClient = (form: object, token : string) => {
+  return new Promise((resolve: Function, reject: Function) => {
+    axios.post(`${RootURL}/client`, form, {
+      headers: { 'Authorization': `Bearer ${token}` }})
+      .then((res : AxiosResponse) => {
+        resolve(res.data);
+      }).catch((err: AxiosError) => {
+        if (err.response && IsAPIFailure(err.response.data)) {
+          resolve(err.response.data)
+          return
+        }
+        reject(err)
+      })
   })
 }
 
