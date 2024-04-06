@@ -85,7 +85,7 @@ func ValidateScope(resType string, scope []string) bool {
 	return false
 }
 
-var redirectURIRegex = regexp.MustCompile(`^https:\/\/([a-z0-9]|\.|\-|\_)*(\/[a-z0-9A-Z:@?=&%.\-_$+]+)*$`)
+var redirectURIRegex = regexp.MustCompile(`^(https|http):\/\/([a-z0-9]|\.|\-|\_)*(\/[a-z0-9A-Z:@?=&%.\-_$+]+)*$`)
 
 // ValidateRedirectURI validates a client redirect URI.
 func ValidateRedirectURI(uri string) bool {
