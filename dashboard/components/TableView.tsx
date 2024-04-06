@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client'
 
-import { TrashCan } from '@carbon/icons-react'
+import { TrashCan, Edit } from '@carbon/icons-react'
 import {
   DataTable, Table, TableHead, TableRow,
   TableHeader, TableBody, TableCell,
@@ -12,17 +12,18 @@ import {
 
 export default function TableView(props: {
   rows: any, headers: any, title: string,
-  description: string, hasAddButton: boolean,
+  description: string, hasCreateButton: boolean,
+  hasModifyButton: boolean, onCreate: Function,
   onDelete: Function,
 }) {
 
   const addButton = () => {
-    if (!props.hasAddButton) {
+    if (!props.hasCreateButton) {
       return null
     }
     return (
       <TableToolbarContent>
-        <Button>Create</Button>
+        <Button onClick={props.onCreate}>Create</Button>
       </TableToolbarContent>
     )
   }
@@ -79,6 +80,7 @@ export default function TableView(props: {
                       {header.header}
                     </TableHeader>
                   ))}
+                  { (props.hasModifyButton) ? <TableHeader></TableHeader> : null}
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -88,6 +90,11 @@ export default function TableView(props: {
                     {row.cells.map((cell) => (
                       <TableCell key={cell.id}>{cell.value}</TableCell>
                     ))}
+                    {
+                      (props.hasModifyButton) ?
+                      <TableCell width={20}><Edit /></TableCell> :
+                      null
+                    }
                   </TableRow>
                 ))}
               </TableBody>
