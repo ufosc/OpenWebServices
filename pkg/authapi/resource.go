@@ -134,7 +134,7 @@ func (cntrl *DefaultAPIController) GetUsersRoute() gin.HandlerFunc {
 			return
 		}
 
-		docs, err := cntrl.db.Users().Batch(20, pagei*20)
+		docs, err := cntrl.db.Users().Batch(10, pagei*10)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "failed to fetch documents from server",
@@ -143,7 +143,7 @@ func (cntrl *DefaultAPIController) GetUsersRoute() gin.HandlerFunc {
 		}
 
 		count, err := cntrl.db.Users().Count()
-		if err != nil || count < 1 {
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "failed to fetch documents from server",
 			})
@@ -445,7 +445,7 @@ func (cntrl *DefaultAPIController) GetClientsRoute() gin.HandlerFunc {
 			return
 		}
 
-		docs, err := cntrl.db.Clients().Batch(20, pagei*20)
+		docs, err := cntrl.db.Clients().Batch(10, pagei*10)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "failed to fetch documents from server",
@@ -454,7 +454,7 @@ func (cntrl *DefaultAPIController) GetClientsRoute() gin.HandlerFunc {
 		}
 
 		count, err := cntrl.db.Clients().Count()
-		if err != nil || count < 1 {
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "failed to fetch documents from server",
 			})
