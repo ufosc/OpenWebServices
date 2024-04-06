@@ -1,11 +1,15 @@
 'use client'
 
 import TableView from './TableView'
-import { GetUsers, DeleteUser, IsAPISuccess, IsAPIFailure } from '@/APIController/API'
 import { useState, useEffect } from 'react'
 import { useCookies } from 'next-client-cookies'
 import { useRouter } from 'next/navigation'
 import { Loading, InlineNotification } from '@carbon/react'
+
+import {
+  GetUsers, DeleteUser,
+  IsAPISuccess, IsAPIFailure
+} from '@/APIController/API'
 
 // IBM Carbon is serious dogshit.
 import PaginationNav from '@carbon/react/lib/components/PaginationNav/PaginationNav'
@@ -79,7 +83,7 @@ export default function Users() {
       }))
 
       setIsLoading(false)
-      const pageCount = Math.ceil((res as UsersResponse).total_count / 20)
+      const pageCount = Math.ceil((res as UsersResponse).total_count / 10)
       if (pageCount !== numPages && pageCount > 0) {
         setNumPages(pageCount)
       }
@@ -150,8 +154,10 @@ export default function Users() {
         title="Users"
         description="Users are individuals who have signed up for an OSC
         account and have and successfully verified their email address."
-        hasAddButton={false}
+        hasCreateButton={false}
+        hasModifyButton={true}
         onDelete={onDelete}
+        onCreate={() => {}}
       />
       <PaginationNav itemsShown={5} totalItems={numPages} onChange={pageChange} />
     </>
