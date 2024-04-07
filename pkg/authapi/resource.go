@@ -112,6 +112,69 @@ func (cntrl *DefaultAPIController) UpdateUserRoute() gin.HandlerFunc {
 	}
 }
 
+// UpdateUserRealmsRoute is the same as UpdateUserRoute, but allows
+// modifying the user's realms. It requires special user realms.
+func (cntrl *DefaultAPIController) UpdateUserRealmsRoute() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req struct {
+			FirstName string   `json:"first_name" binding:"required"`
+			LastName  string   `json:"last_name" binding:"required"`
+			Realms    []string `json:"realms" binding:"required"`
+		}
+
+		userID := c.Param("id")
+
+		// Extract JSON body.
+		if err := c.BindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Missing required fields",
+			})
+			return
+		}
+
+		// Get user.
+		user, err := cntrl.db.Users().FindByID(userID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "user not found",
+			})
+			return
+		}
+
+		if len(req.FirstName) > 20 || len(req.LastName) > 20 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "first and/or last name are too long (> 20 chars)",
+			})
+			return
+		}
+
+		if len(req.FirstName) < 2 || len(req.LastName) < 2 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "first and/or last name are too short",
+			})
+			return
+		}
+
+		user.FirstName = req.FirstName
+		user.LastName = req.LastName
+		user.Realms = req.Realms
+		if _, err := cntrl.db.Users().Update(user); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "an error occurred. please try again later",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message":    "success",
+			"user_id":    user.ID,
+			"first_name": user.FirstName,
+			"last_name":  user.LastName,
+			"realms":     user.Realms,
+		})
+	}
+}
+
 // ForgotPassword sends the user an email to change their password.
 func (cntrl *DefaultAPIController) ResetPwdRoute() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -369,6 +432,13 @@ func (cntrl *DefaultAPIController) DeleteUserRoute() gin.HandlerFunc {
 		if !hasDeletionRealm {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": "not authorized to delete other users",
+			})
+			return
+		}
+
+		if user.ID == userID {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "cannot delete self",
 			})
 			return
 		}
