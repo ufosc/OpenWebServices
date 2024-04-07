@@ -51,11 +51,16 @@ func main() {
 		api.GetUserRoute())
 
 	r.PUT("/user", authmw.X(api.DB(), authmw.Config{
-		Scope: []string{"users.modify"},
+		Scope: []string{"users.update"},
 	}), api.UpdateUserRoute())
 
+	r.PUT("/user/realms/:id", authmw.X(api.DB(), authmw.Config{
+		Scope:  []string{"users.update"},
+		Realms: []string{"users.update"},
+	}), api.UpdateUserRealmsRoute())
+
 	r.DELETE("/user/:id", authmw.X(api.DB(), authmw.Config{
-		Scope: []string{"users.delete"},
+		Scope:  []string{"users.delete"},
 		Realms: []string{"users.delete"},
 	}), api.DeleteUserRoute())
 
