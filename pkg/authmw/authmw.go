@@ -111,7 +111,7 @@ func X(db authdb.Database, config Config) gin.HandlerFunc {
 		clientExists := authdb.ClientModel{
 			ID: "0",
 			Scope: []string{
-				"dashboard", "users.modify",
+				"dashboard", "users.update",
 				"users.read", "users.delete",
 				"clients.read", "clients.delete",
 				"clients.create",
