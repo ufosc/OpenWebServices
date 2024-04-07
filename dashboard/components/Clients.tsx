@@ -42,7 +42,7 @@ const headers = [
   },
   {
     key: 'ttl',
-    header: 'TTL',
+    header: 'TTL (sec)',
   },
 ]
 
@@ -198,7 +198,7 @@ export default function Clients() {
         return
       }
 
-      let msg = (IsAPIFailure(res) && typeof res.error != "undefined") ?
+      let msg = (IsAPIFailure(res) && typeof res.error !== "undefined") ?
 	res.error : "An unknown error has occured. Please try again later."
 
       setClientModal(false)
@@ -324,11 +324,11 @@ export default function Clients() {
                       })}
                     />) : null
                     }
-                    <Button id='submit-create-client' type='submit'
-                      style={{ display: 'none' }}>
-                      Submit
-                    </Button>
                   </FormGroup>
+                  <Button id='submit-create-client' type='submit'
+                    style={{ display: 'none' }}>
+                    Submit
+                  </Button>
                 </Form>
               </ModalBody>
             </Modal>,
@@ -348,6 +348,7 @@ export default function Clients() {
         hasModifyButton={false}
         onCreate={() => { setClientModal(true) }}
         onDelete={onDelete}
+        onEdit={() => {}}
       />
       <PaginationNav itemsShown={5} totalItems={numPages} onChange={pageChange} />
     </>
