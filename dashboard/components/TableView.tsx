@@ -14,7 +14,7 @@ export default function TableView(props: {
   rows: any, headers: any, title: string,
   description: string, hasCreateButton: boolean,
   hasModifyButton: boolean, onCreate: Function,
-  onDelete: Function,
+  onDelete: Function, onEdit: Function,
 }) {
 
   const addButton = () => {
@@ -92,7 +92,11 @@ export default function TableView(props: {
                     ))}
                     {
                       (props.hasModifyButton) ?
-                      <TableCell width={20}><Edit /></TableCell> :
+                        <TableCell width={20}>
+                          <Button renderIcon={Edit} kind="ghost" hasIconOnly
+                            onClick={() => props.onEdit(row.cells)}
+                          />
+                        </TableCell> :
                       null
                     }
                   </TableRow>

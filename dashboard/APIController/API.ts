@@ -147,6 +147,23 @@ export const UpdateUser = (firstName : string, lastName : string,
   })
 }
 
+export const UpdateUserRealms = (form: object, id: string, token: string) => {
+  return new Promise((resolve: Function, reject: Function) => {
+    axios.put(`${RootURL}/user/realms/${id}`, form,
+      { headers: { 'Authorization': `Bearer ${token}` }})
+      .then((res : AxiosResponse) => {
+        resolve(res.data)
+      })
+      .catch((err : AxiosError) => {
+        if (err.response && IsAPIFailure(err.response.data)) {
+          resolve(err.response.data)
+          return
+        }
+        reject(err)
+      })
+  })
+}
+
 export const DeleteUser = (id : string, token : string) => {
   return new Promise((resolve: Function, reject: Function) => {
     axios.delete(`${RootURL}/user/${id}`, { headers: {
