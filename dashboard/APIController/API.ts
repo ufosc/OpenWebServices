@@ -1,7 +1,8 @@
 import axios, { AxiosResponse, AxiosError } from 'axios'
 import { TypeSigninBody, TypeSignupBody, APIResponse } from './types'
+import { API_ENDPOINT } from '../config'
 
-const RootURL = "http://localhost:8080"
+const RootURL = API_ENDPOINT
 
 export const GetClient = (id : string) => {
   return new Promise((resolve: Function, reject: Function) => {
