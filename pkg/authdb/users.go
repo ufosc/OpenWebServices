@@ -10,23 +10,23 @@ import (
 
 // UserModel is the user schema.
 type UserModel struct {
-	ID           string   `bson:"_id,omitempty"`
-	Email        string   `bson:"email"`
-	Password     string   `bson:"password"`
-	FirstName    string   `bson:"first_name"`
-	LastName     string   `bson:"last_name"`
-	Realms       []string `bson:"realms"`
-	LastVerified int64    `bson:"last_verified"`
-	CreatedAt    int64    `bson:"createdAt"`
+	ID        string   `bson:"_id,omitempty"`
+	Email     string   `bson:"email"`
+	Password  string   `bson:"password"`
+	FirstName string   `bson:"first_name"`
+	LastName  string   `bson:"last_name"`
+	Realms    []string `bson:"realms"`
+	CreatedAt int64    `bson:"createdAt"`
 }
 
 // PendingUserModel is a sign up request that is awaiting email
 // verification.
 type PendingUserModel struct {
-	ID    string    `bson:"_id,omitempty"`
-	Email string    `bson:"email"`
-	User  UserModel `bson:"user"`
-	TTL   int64     `bson:"expireAfterSeconds"`
+	ID        string    `bson:"_id,omitempty"`
+	Email     string    `bson:"email"`
+	User      UserModel `bson:"user"`
+	TTL       int64     `bson:"expireAfterSeconds"`
+	CreatedAt int64     `bson:"createdAt"`
 }
 
 // UserController defines database operations for the OAuth2 user model.
