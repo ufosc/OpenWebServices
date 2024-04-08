@@ -92,16 +92,16 @@ func (cntrl *DefaultAPIController) SignUpRoute() gin.HandlerFunc {
 		pendingUser := authdb.PendingUserModel{
 			Email: req.Email,
 			User: authdb.UserModel{
-				ID:           "",
-				Email:        req.Email,
-				Password:     string(hash),
-				FirstName:    req.FirstName,
-				LastName:     req.LastName,
-				Realms:       []string{},
-				LastVerified: 0,
-				CreatedAt:    0,
+				ID:        "",
+				Email:     req.Email,
+				Password:  string(hash),
+				FirstName: req.FirstName,
+				LastName:  req.LastName,
+				Realms:    []string{},
+				CreatedAt: 0,
 			},
-			TTL: 600, // 10 minutes.
+			CreatedAt: time.Now().Unix(),
+			TTL:       600, // 10 minutes.
 		}
 
 		// Save pending user to database.
@@ -211,7 +211,6 @@ func (cntrl *DefaultAPIController) VerifyEmailRoute() gin.HandlerFunc {
 
 		// Update user creation dates.
 		pending.User.CreatedAt = time.Now().Unix()
-		pending.User.LastVerified = time.Now().Unix()
 
 		// Sign up.
 		if _, err := cntrl.db.Users().Create(pending.User); err != nil {
