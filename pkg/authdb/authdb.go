@@ -3,8 +3,10 @@ package authdb
 import (
 	"context"
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"os"
 	"sync"
 	"sync/atomic"
 )
@@ -74,7 +76,56 @@ func NewDatabase(uri, name string) (*MongoDatabase, error) {
 	}
 	db.users = users
 
+	addTTL(db)
 	return db, nil
+}
+
+// Add TTL indices.
+func addTTL(db *MongoDatabase) {
+	index := func(ttl int32) mongo.IndexModel {
+		return mongo.IndexModel{
+			Keys:    bson.M{"createdAt": 1},
+			Options: options.Index().SetExpireAfterSeconds(ttl),
+		}
+	}
+
+	// Gather database collections.
+	clicol := db.state.Client.Database(db.state.Name).Collection("clients")
+	refcol := db.state.Client.Database(db.state.Name).Collection("refresh_tokens")
+	acccol := db.state.Client.Database(db.state.Name).Collection("access_tokens")
+	autcol := db.state.Client.Database(db.state.Name).Collection("auth_tokens")
+	pencol := db.state.Client.Database(db.state.Name).Collection("pending_users")
+
+	// Apply indices.
+	_, err := clicol.Indexes().CreateOne(context.TODO(), index(7890000))
+	if err != nil {
+		fmt.Println("unable to apply TTL to client collection:", err)
+		os.Exit(1)
+	}
+
+	_, err = refcol.Indexes().CreateOne(context.TODO(), index(5256000))
+	if err != nil {
+		fmt.Println("unable to apply TTL to refresh token collection:", err)
+		os.Exit(1)
+	}
+
+	_, err = acccol.Indexes().CreateOne(context.TODO(), index(1200))
+	if err != nil {
+		fmt.Println("unable to apply TTL to access token collection:", err)
+		os.Exit(1)
+	}
+
+	_, err = autcol.Indexes().CreateOne(context.TODO(), index(600))
+	if err != nil {
+		fmt.Println("unable to apply TTL to grant token collection:", err)
+		os.Exit(1)
+	}
+
+	_, err = pencol.Indexes().CreateOne(context.TODO(), index(600))
+	if err != nil {
+		fmt.Println("unable to apply TTL to pending_users collection:", err)
+		os.Exit(1)
+	}
 }
 
 // Stop the database.
