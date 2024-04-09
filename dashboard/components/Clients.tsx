@@ -2,6 +2,7 @@
 
 import TableView from './TableView'
 import PaginationNav from '@carbon/react/lib/components/PaginationNav/PaginationNav'
+import { DeleteClient, GetClients, CreateClient } from '@/API'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
@@ -12,11 +13,6 @@ import {
   TextInput, TextArea, Select, SelectItem, FormGroup, Checkbox,
   Button,
 } from '@carbon/react'
-
-import {
-  DeleteClient, GetClients, IsAPIFailure, IsAPISuccess,
-  PostCreateClient
-} from '@/APIController/API'
 
 // Data table headers.
 const headers = [
@@ -83,12 +79,6 @@ export default function Clients() {
 
   const fetchTable = () => {
     GetClients(page, token as string).then((res) => {
-      if (!IsAPISuccess(res)) {
-        cookies.remove('ows-access-tokens')
-        router.push('/authorize')
-        return
-      }
-
       setRows((res as ClientResponse).clients.map(client => {
         let text = ""
         for (let i = 0; i < client.scope.length; ++i) {
@@ -113,6 +103,7 @@ export default function Clients() {
     })
   }
 
+  // Fetch table every time page is changed.
   useEffect(fetchTable, [page])
 
   const pageChange = (newPage : number) => {
@@ -127,11 +118,8 @@ export default function Clients() {
     setIsLoading(true)
     let hasError = false
     for (let i = 0; i < selectedRows.length; ++i) {
-      await DeleteClient(selectedRows[i].id, token as string).then((res) => {
-        if (IsAPIFailure(res)) {
-          hasError = true
-        }
-      }).catch(err => { hasError = true })
+      await DeleteClient(selectedRows[i].id, token as string)
+        .catch(err => { hasError = true })
     }
 
     if (hasError) {
@@ -164,16 +152,16 @@ export default function Clients() {
     if (createClientForm.email && createClientForm.response_type === 'code')
       form.scope.push('email')
 
-    PostCreateClient(form, token).then((res) => {
-      setCreateClientForm({
-        name: "",
-        description: "",
-        response_type: "code",
-        redirect_uri: "",
-        email: false,
-      })
+    CreateClient(form, token)
+      .then((res) => {
+        setCreateClientForm({
+          name: "",
+          description: "",
+          response_type: "code",
+          redirect_uri: "",
+          email: false,
+        })
 
-      if (IsAPISuccess(res)) {
         setClientModal(false)
         setNotifData({
           title: "Success",
@@ -183,33 +171,25 @@ export default function Clients() {
         setHasNotif(true)
         setTimeout(() => { setHasNotif(false) }, 5000)
         fetchTable()
-        return
-      }
-
-      if (IsAPIFailure(res) && res.error == 'insufficient_scope') {
+      })
+      .catch((err) => {
         setClientModal(false)
-        setNotifData({
-          title: "Error Creating Client",
-          subtitle: "You are not authorized to create clients",
-          kind: "error"
-        })
+        if (err.error == 'insufficient_scope') {
+          setNotifData({
+            title: "Error Creating Client",
+            subtitle: "You are not authorized to create clients",
+            kind: "error"
+          })
+        } else {
+          setNotifData({
+            title: "Error",
+            subtitle: err.error_description,
+            kind: "error"
+          })
+        }
         setHasNotif(true)
         setTimeout(() => { setHasNotif(false) }, 5000)
-        return
-      }
-
-      let msg = (IsAPIFailure(res) && typeof res.error !== "undefined") ?
-	res.error : "An unknown error has occured. Please try again later."
-
-      setClientModal(false)
-      setNotifData({
-        title: "Error",
-        subtitle: msg,
-        kind: "error"
       })
-      setHasNotif(true)
-      setTimeout(() => { setHasNotif(false) }, 5000)
-    })
   }
 
   return (

@@ -75,21 +75,24 @@ func (cntrl *DefaultAPIController) UpdateUserRoute() gin.HandlerFunc {
 		// Extract JSON body.
 		if err := c.BindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Missing required fields",
+				"error":             "invalid_request",
+				"error_description": "Missing required fields",
 			})
 			return
 		}
 
 		if len(req.FirstName) > 20 || len(req.LastName) > 20 {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "first and/or last name are too long (> 20 chars)",
+				"error":             "invalid_request",
+				"error_description": "first and/or last name are too long (> 20 chars)",
 			})
 			return
 		}
 
 		if len(req.FirstName) < 2 || len(req.LastName) < 2 {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "first and/or last name are too short",
+				"error":             "invalid_request",
+				"error_description": "first and/or last name are too short",
 			})
 			return
 		}
@@ -98,7 +101,8 @@ func (cntrl *DefaultAPIController) UpdateUserRoute() gin.HandlerFunc {
 		user.LastName = req.LastName
 		if _, err := cntrl.db.Users().Update(user); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "an error occurred. please try again later",
+				"error":             "internal_server_error",
+				"error_description": "an error occurred. please try again later",
 			})
 			return
 		}
@@ -127,7 +131,8 @@ func (cntrl *DefaultAPIController) UpdateUserRealmsRoute() gin.HandlerFunc {
 		// Extract JSON body.
 		if err := c.BindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Missing required fields",
+				"error":             "invalid_request",
+				"error_description": "Missing required fields",
 			})
 			return
 		}
@@ -136,21 +141,24 @@ func (cntrl *DefaultAPIController) UpdateUserRealmsRoute() gin.HandlerFunc {
 		user, err := cntrl.db.Users().FindByID(userID)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{
-				"error": "user not found",
+				"error":             "not_found",
+				"error_description": "user not found",
 			})
 			return
 		}
 
 		if len(req.FirstName) > 20 || len(req.LastName) > 20 {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "first and/or last name are too long (> 20 chars)",
+				"error":             "invalid_request",
+				"error_description": "first and/or last name are too long (> 20 chars)",
 			})
 			return
 		}
 
 		if len(req.FirstName) < 2 || len(req.LastName) < 2 {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "first and/or last name are too short",
+				"error":             "invalid_request",
+				"error_description": "first and/or last name are too short",
 			})
 			return
 		}
@@ -160,7 +168,8 @@ func (cntrl *DefaultAPIController) UpdateUserRealmsRoute() gin.HandlerFunc {
 		user.Realms = req.Realms
 		if _, err := cntrl.db.Users().Update(user); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "an error occurred. please try again later",
+				"error":             "internal_server_error",
+				"error_description": "an error occurred. please try again later",
 			})
 			return
 		}
@@ -179,7 +188,8 @@ func (cntrl *DefaultAPIController) UpdateUserRealmsRoute() gin.HandlerFunc {
 func (cntrl *DefaultAPIController) ResetPwdRoute() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.JSON(http.StatusNotImplemented, gin.H{
-			"error": "not implemented",
+			"error":             "not_implemented",
+			"error_description": "not implemented",
 		})
 	}
 }
@@ -192,7 +202,8 @@ func (cntrl *DefaultAPIController) GetUsersRoute() gin.HandlerFunc {
 		pagei, err := strconv.ParseInt(page, 10, 64)
 		if err != nil || pagei < 0 {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "page must be >= 0",
+				"error":             "invalid_request",
+				"error_description": "page must be >= 0",
 			})
 			return
 		}
@@ -200,7 +211,8 @@ func (cntrl *DefaultAPIController) GetUsersRoute() gin.HandlerFunc {
 		docs, err := cntrl.db.Users().Batch(10, pagei*10)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "failed to fetch documents from server",
+				"error":             "internal_server_error",
+				"error_description": "failed to fetch documents from server",
 			})
 			return
 		}
@@ -208,7 +220,8 @@ func (cntrl *DefaultAPIController) GetUsersRoute() gin.HandlerFunc {
 		count, err := cntrl.db.Users().Count()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "failed to fetch documents from server",
+				"error":             "internal_server_error",
+				"error_description": "failed to fetch documents from server",
 			})
 			return
 		}
@@ -248,7 +261,8 @@ func (cntrl *DefaultAPIController) GetClientRoute() gin.HandlerFunc {
 		clientExists, err := cntrl.db.Clients().FindByID(clientID)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{
-				"error": "client not found",
+				"error":             "not_found",
+				"error_description": "client not found",
 			})
 			return
 		}
@@ -269,6 +283,7 @@ func (cntrl *DefaultAPIController) GetClientRoute() gin.HandlerFunc {
 // It expects user authentication (clients are owned by users).
 func (cntrl *DefaultAPIController) CreateClientRoute() gin.HandlerFunc {
 	return func(c *gin.Context) {
+
 		// Request body.
 		var req struct {
 			Name         string   `json:"name" binding:"required"`
@@ -281,7 +296,8 @@ func (cntrl *DefaultAPIController) CreateClientRoute() gin.HandlerFunc {
 		// Extract JSON body.
 		if err := c.BindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Missing required fields",
+				"error":             "invalid_request",
+				"error_description": "Missing required fields",
 			})
 			return
 		}
@@ -301,7 +317,8 @@ func (cntrl *DefaultAPIController) CreateClientRoute() gin.HandlerFunc {
 
 		if !hasRealm {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "User not authorized to create clients",
+				"error":             "unauthorized",
+				"error_description": "User not authorized to create clients",
 			})
 			return
 		}
@@ -309,7 +326,8 @@ func (cntrl *DefaultAPIController) CreateClientRoute() gin.HandlerFunc {
 		// Validate response type.
 		if req.ResponseType != "code" && req.ResponseType != "token" {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "response_type must be 'code' or 'token'",
+				"error":             "invalid_request",
+				"error_description": "response_type must be 'code' or 'token'",
 			})
 			return
 		}
@@ -317,7 +335,8 @@ func (cntrl *DefaultAPIController) CreateClientRoute() gin.HandlerFunc {
 		// Validate redirect uri.
 		if !common.ValidateRedirectURI(req.RedirectURI) {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "invalid redirect_uri",
+				"error":             "invalid_request",
+				"error_description": "invalid redirect_uri",
 			})
 			return
 		}
@@ -325,7 +344,8 @@ func (cntrl *DefaultAPIController) CreateClientRoute() gin.HandlerFunc {
 		// Validate scope.
 		if !common.ValidateScope(req.ResponseType, req.Scope) {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "invalid scope",
+				"error":             "invalid_request",
+				"error_description": "invalid or unknown scope",
 			})
 			return
 		}
@@ -333,14 +353,16 @@ func (cntrl *DefaultAPIController) CreateClientRoute() gin.HandlerFunc {
 		// Ensure name and description are not too long.
 		if len(req.Name) > 12 {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "name cannot be longer than 12 characters",
+				"error":             "invalid_request",
+				"error_description": "name cannot be longer than 12 characters",
 			})
 			return
 		}
 
 		if len(req.Description) > 150 {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "description cannot be longer than 150 characters",
+				"error":             "invalid_request",
+				"error_description": "description cannot be longer than 150 characters",
 			})
 			return
 		}
@@ -348,7 +370,8 @@ func (cntrl *DefaultAPIController) CreateClientRoute() gin.HandlerFunc {
 		// Ensure name doesn't already exist.
 		if _, err := cntrl.db.Clients().FindByName(req.Name); err != mongo.ErrNoDocuments {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "client name already registered",
+				"error":             "invalid_request",
+				"error_description": "client name already registered",
 			})
 			return
 		}
@@ -357,7 +380,8 @@ func (cntrl *DefaultAPIController) CreateClientRoute() gin.HandlerFunc {
 		privateKey, _, _, err := elliptic.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Internal server error. Please try again later",
+				"error":             "internal_server_error",
+				"error_description": "Internal server error. Please try again later",
 			})
 			return
 		}
@@ -370,7 +394,8 @@ func (cntrl *DefaultAPIController) CreateClientRoute() gin.HandlerFunc {
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Internal server error. Please try again later",
+				"error":             "internal_server_error",
+				"error_description": "Internal server error. Please try again later",
 			})
 			return
 		}
@@ -415,7 +440,8 @@ func (cntrl *DefaultAPIController) DeleteUserRoute() gin.HandlerFunc {
 		_, err := cntrl.db.Users().FindByID(userID)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{
-				"error": "user not found",
+				"error":             "not_found",
+				"error_description": "user not found",
 			})
 			return
 		}
@@ -431,14 +457,16 @@ func (cntrl *DefaultAPIController) DeleteUserRoute() gin.HandlerFunc {
 
 		if !hasDeletionRealm {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "not authorized to delete other users",
+				"error":             "unauthorized",
+				"error_description": "not authorized to delete other users",
 			})
 			return
 		}
 
 		if user.ID == userID {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "cannot delete self",
+				"error":             "unauthorized",
+				"error_description": "cannot delete self",
 			})
 			return
 		}
@@ -446,7 +474,8 @@ func (cntrl *DefaultAPIController) DeleteUserRoute() gin.HandlerFunc {
 		err = cntrl.db.Users().DeleteByID(userID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "could not delete user at this time, please try again later",
+				"error":             "internal_server_error",
+				"error_description": "could not delete user at this time, please try again later",
 			})
 			return
 		}
@@ -467,7 +496,8 @@ func (cntrl *DefaultAPIController) DeleteClientRoute() gin.HandlerFunc {
 		clientExists, err := cntrl.db.Clients().FindByID(clientID)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{
-				"error": "client not found",
+				"error":             "not_found",
+				"error_description": "client not found",
 			})
 			return
 		}
@@ -483,7 +513,8 @@ func (cntrl *DefaultAPIController) DeleteClientRoute() gin.HandlerFunc {
 
 		if clientExists.Owner != user.ID && !hasDeletionRealm {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "client does not belong to this user",
+				"error":             "unauthorized",
+				"error_description": "client does not belong to you",
 			})
 			return
 		}
@@ -491,7 +522,8 @@ func (cntrl *DefaultAPIController) DeleteClientRoute() gin.HandlerFunc {
 		err = cntrl.db.Clients().DeleteByID(clientID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "could not delete client at this time, please try again later",
+				"error":             "internal_server_error",
+				"error_description": "could not delete client at this time, please try again later",
 			})
 			return
 		}
@@ -510,7 +542,8 @@ func (cntrl *DefaultAPIController) GetClientsRoute() gin.HandlerFunc {
 		pagei, err := strconv.ParseInt(page, 10, 64)
 		if err != nil || pagei < 0 {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "page must be >= 0",
+				"error":             "invalid_request",
+				"error_description": "page must be >= 0",
 			})
 			return
 		}
@@ -518,7 +551,8 @@ func (cntrl *DefaultAPIController) GetClientsRoute() gin.HandlerFunc {
 		docs, err := cntrl.db.Clients().Batch(10, pagei*10)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "failed to fetch documents from server",
+				"error":             "internal_server_error",
+				"error_description": "failed to fetch documents from server",
 			})
 			return
 		}
@@ -526,7 +560,8 @@ func (cntrl *DefaultAPIController) GetClientsRoute() gin.HandlerFunc {
 		count, err := cntrl.db.Clients().Count()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "failed to fetch documents from server",
+				"error":             "internal_server_error",
+				"error_description": "failed to fetch documents from server",
 			})
 			return
 		}

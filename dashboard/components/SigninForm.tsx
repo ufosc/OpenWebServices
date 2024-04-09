@@ -1,9 +1,7 @@
 'use client'
 
 import { ArrowRight } from '@carbon/icons-react'
-import { TypeSigninBody } from '@/APIController/types'
-import { IsAPIFailure, IsAPISuccess, PostSignin } from '@/APIController/API'
-import { ValidateEmail } from '@/APIController/Validation'
+import { SignIn, ValidateEmail } from '@/API'
 import { useTheme, Button, Form, Heading, TextInput, Link } from '@carbon/react'
 import { useState } from 'react'
 import { useCookies } from 'next-client-cookies'
@@ -18,7 +16,7 @@ const SigninForm = (props: { setView: Function }) => {
   }
 
   const [hasError, setHasError] = useState("")
-  const [form, setForm] = useState<TypeSigninBody>({ email: "", password: "" })
+  const [form, setForm] = useState({ email: "", password: "" })
   const submitForm = async (e : any) => {
     e.preventDefault()
 
@@ -29,22 +27,16 @@ const SigninForm = (props: { setView: Function }) => {
     }
 
     // Make API call.
-    PostSignin(form).then((res) => {
-      if (IsAPISuccess(res)) {
-	if (typeof res.token !== "undefined") {
-	  cookies.set('ows-access-token', res.token)
-	}
-        router.refresh()
-	return
+    SignIn(form).then(_res => {
+      let res = _res as { token: string }
+      if (typeof res.token !== "undefined") {
+	cookies.set('ows-access-token', res.token)
       }
-
-      let msg = (IsAPIFailure(res) && typeof res.error != "undefined") ?
-	res.error : "An unknown error has occured. Please try again later."
-
-      setHasError(msg)
+      router.refresh()
     }).catch((err) => {
-      setHasError("Server could not be reached. Please try again later")
+      setHasError(err.error_description)
     })
+
   }
 
   return (

@@ -3,7 +3,6 @@
 import './style.scss'
 import { ArrowRight, Wikis } from '@carbon/icons-react'
 import { useTheme, Button, Form, Heading, Accordion, AccordionItem } from '@carbon/react'
-import { TypeAuthGrant } from '@/APIController/types'
 import { PublicScope, EmailScope, ModifyScope } from './scopes'
 import { useCookies } from 'next-client-cookies'
 import { useRouter } from 'next/navigation'

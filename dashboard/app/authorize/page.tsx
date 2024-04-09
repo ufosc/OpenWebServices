@@ -1,15 +1,14 @@
 'use client'
 
-import { ValidateClientURLParams } from '@/APIController/Validation'
+import { ValidateClientURLParams } from '@/API'
 import ImageBanner from '@/components/ImageBanner/imagebanner'
 import SigninForm from '@/components/SigninForm'
 import SignupForm from '@/components/SignupForm'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useCookies } from 'next-client-cookies'
-import { TypeAuthGrant } from '@/APIController/types'
 import ClientError from './cerror'
-import Permissions from './permissions'
+import { Permissions, ClientDefinition } from './permissions'
 import './style.scss'
 
 export default function Page() {
@@ -20,7 +19,7 @@ export default function Page() {
 
   // Gather client parameters.
   const searchParams = useSearchParams()
-  const client : TypeAuthGrant = {
+  const client = {
     response_type: searchParams.get('response_type'),
     client_id: searchParams.get('client_id'),
     redirect_uri: searchParams.get('redirect_uri'),
@@ -28,7 +27,6 @@ export default function Page() {
   }
 
   const renderForm = () => {
-    // Validate URL params.
     if (!ValidateClientURLParams(client)) {
       return (
 	<ClientError>
@@ -56,7 +54,7 @@ export default function Page() {
     }
 
     // Display permissions page.
-    return (<Permissions client={client} />)
+    return (<Permissions client={client as ClientDefinition} />)
   }
 
   return (

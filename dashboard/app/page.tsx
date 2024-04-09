@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useCookies } from 'next-client-cookies'
 import MyAccount from '@/components/MyAccount'
-import { GetUser, IsAPISuccess } from '@/APIController/API'
+import { GetUser, IsAPISuccess } from '@/API'
 import Users from '@/components/Users'
 import Clients from '@/components/Clients'
 import { useRouter } from 'next/navigation'
@@ -26,17 +26,12 @@ export default function Page() {
     }
 
     if (user === null) {
-      GetUser(token as string).then((res) => {
-        if (!IsAPISuccess(res)) {
+      GetUser(token as string)
+        .then((res) => setUser(res as User))
+        .catch((err) => {
           cookies.remove('ows-access-token')
           router.push("/authorize")
-          return
-        }
-        setUser(res as User)
-      }).catch((err) => {
-        cookies.remove('ows-access-token')
-        router.push("/authorize")
-      })
+        })
     }
   }, [])
 
