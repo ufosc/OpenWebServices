@@ -76,12 +76,12 @@ func NewDatabase(uri, name string) (*MongoDatabase, error) {
 	}
 	db.users = users
 
-	addTTL(db)
+	initIndices(db)
 	return db, nil
 }
 
-// Add TTL indices.
-func addTTL(db *MongoDatabase) {
+// initIndices initializes database indices.
+func initIndices(db *MongoDatabase) {
 	index := func(ttl int32) mongo.IndexModel {
 		return mongo.IndexModel{
 			Keys:    bson.M{"createdAt": 1},
@@ -124,6 +124,44 @@ func addTTL(db *MongoDatabase) {
 	_, err = pencol.Indexes().CreateOne(context.TODO(), index(600))
 	if err != nil {
 		fmt.Println("unable to apply TTL to pending_users collection:", err)
+		os.Exit(1)
+	}
+
+	// Create a custom identifier index for tokens and verification
+	// emails. Default indices are not cryptographically random.
+	_, err = refcol.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
+		Keys: bson.M{"ID": 1},
+	})
+
+	if err != nil {
+		fmt.Println("cannot apply index to refresh_token collection", err)
+		os.Exit(1)
+	}
+
+	_, err = acccol.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
+		Keys: bson.M{"ID": 1},
+	})
+
+	if err != nil {
+		fmt.Println("cannot apply index to access_token collection", err)
+		os.Exit(1)
+	}
+
+	_, err = autcol.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
+		Keys: bson.M{"ID": 1},
+	})
+
+	if err != nil {
+		fmt.Println("cannot apply index to auth_token collection", err)
+		os.Exit(1)
+	}
+
+	_, err = pencol.Indexes().CreateOne(context.TODO(), mongo.IndexModel{
+		Keys: bson.M{"ID": 1},
+	})
+
+	if err != nil {
+		fmt.Println("cannot apply index to pending_users collection", err)
 		os.Exit(1)
 	}
 }
