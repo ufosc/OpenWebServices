@@ -98,6 +98,7 @@ func (cntrl *DefaultAPIController) SignUpRoute() gin.HandlerFunc {
 
 		// Create pending user instance.
 		pendingUser := authdb.PendingUserModel{
+			ID:    common.UUID(),
 			Email: req.Email,
 			User: authdb.UserModel{
 				ID:        "",
@@ -175,6 +176,7 @@ func (cntrl *DefaultAPIController) SignInRoute() gin.HandlerFunc {
 
 		// Generate access token.
 		tk, err := cntrl.db.Tokens().CreateAccess(authdb.TokenModel{
+			ID:        common.UUID(),
 			ClientID:  "0",
 			UserID:    userExists.ID,
 			CreatedAt: time.Now().Unix(),
