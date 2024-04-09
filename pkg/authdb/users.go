@@ -22,7 +22,8 @@ type UserModel struct {
 // PendingUserModel is a sign up request that is awaiting email
 // verification.
 type PendingUserModel struct {
-	ID        string    `bson:"_id,omitempty"`
+	_id       string    `bson:"_id,omitempty"`
+	ID        string    `bson:"ID"`
 	Email     string    `bson:"email"`
 	User      UserModel `bson:"user"`
 	TTL       int64     `bson:"expireAfterSeconds"`
@@ -234,15 +235,11 @@ func (cc *MongoUserController) FindPendingByID(id string) (
 	cc.state.Wg.Add(1)
 	defer cc.state.Wg.Done()
 
-	// Extract primitive object ID.
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return PendingUserModel{}, err
-	}
-
 	// Find model.
 	var user PendingUserModel
-	err = cc.pcoll.FindOne(context.TODO(), bson.D{{Key: "_id", Value: objID}}).Decode(&user)
+	err := cc.pcoll.FindOne(context.TODO(),
+		bson.D{{Key: "ID", Value: id}}).Decode(&user)
+
 	if err != nil {
 		return PendingUserModel{}, err
 	}
@@ -281,12 +278,12 @@ func (cc *MongoUserController) CreatePending(usr PendingUserModel) (
 	defer cc.state.Wg.Done()
 
 	// Insert
-	res, err := cc.pcoll.InsertOne(context.TODO(), usr)
+	_, err := cc.pcoll.InsertOne(context.TODO(), usr)
 	if err != nil {
 		return "", err
 	}
 
-	return res.InsertedID.(primitive.ObjectID).Hex(), nil
+	return usr.ID, nil
 }
 
 // DeletePendingByID deletes the pending user with the given id.
@@ -298,12 +295,8 @@ func (cc *MongoUserController) DeletePendingByID(id string) error {
 	cc.state.Wg.Add(1)
 	defer cc.state.Wg.Done()
 
-	// Extract primitive object ID.
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
+	_, err := cc.pcoll.DeleteOne(context.TODO(),
+		bson.D{{Key: "ID", Value: id}})
 
-	_, err = cc.pcoll.DeleteOne(context.TODO(), bson.D{{Key: "_id", Value: objID}})
 	return err
 }

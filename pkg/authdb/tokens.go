@@ -3,14 +3,14 @@ package authdb
 import (
 	"context"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // The Token schema is used for authentication codes, access tokens, and
 // refresh tokens.
 type TokenModel struct {
-	ID        string `bson:"_id,omitempty"`
+	_id       string `bson:"_id,omitempty"`
+	ID        string `bson:"ID"`
 	ClientID  string `bson:"client_id"`
 	UserID    string `bson:"user_id"`
 	CreatedAt int64  `bson:"createdAt"`
@@ -73,15 +73,11 @@ func (cc *MongoTokenController) FindRefreshByID(id string) (TokenModel, error) {
 	cc.state.Wg.Add(1)
 	defer cc.state.Wg.Done()
 
-	// Extract primitive object ID.
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return TokenModel{}, err
-	}
-
 	// Find model.
 	var token TokenModel
-	err = cc.refreshColl.FindOne(context.TODO(), bson.D{{Key: "_id", Value: objID}}).Decode(&token)
+	err := cc.refreshColl.FindOne(context.TODO(),
+		bson.D{{Key: "ID", Value: id}}).Decode(&token)
+
 	if err != nil {
 		return TokenModel{}, err
 	}
@@ -98,12 +94,12 @@ func (cc *MongoTokenController) CreateRefresh(tk TokenModel) (string, error) {
 	defer cc.state.Wg.Done()
 
 	// Insert.
-	res, err := cc.refreshColl.InsertOne(context.TODO(), tk)
+	_, err := cc.refreshColl.InsertOne(context.TODO(), tk)
 	if err != nil {
 		return "", err
 	}
 
-	return res.InsertedID.(primitive.ObjectID).Hex(), nil
+	return tk.ID, nil
 }
 
 func (cc *MongoTokenController) DeleteRefreshByID(id string) error {
@@ -113,14 +109,9 @@ func (cc *MongoTokenController) DeleteRefreshByID(id string) error {
 
 	cc.state.Wg.Add(1)
 	defer cc.state.Wg.Done()
+	_, err := cc.refreshColl.DeleteOne(context.TODO(),
+		bson.D{{Key: "ID", Value: id}})
 
-	// Extract primitive object ID.
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
-
-	_, err = cc.refreshColl.DeleteOne(context.TODO(), bson.D{{Key: "_id", Value: objID}})
 	return err
 }
 
@@ -132,15 +123,11 @@ func (cc *MongoTokenController) FindAccessByID(id string) (TokenModel, error) {
 	cc.state.Wg.Add(1)
 	defer cc.state.Wg.Done()
 
-	// Extract primitive object ID.
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return TokenModel{}, err
-	}
-
 	// Find model.
 	var token TokenModel
-	err = cc.accessColl.FindOne(context.TODO(), bson.D{{Key: "_id", Value: objID}}).Decode(&token)
+	err := cc.accessColl.FindOne(context.TODO(),
+		bson.D{{Key: "ID", Value: id}}).Decode(&token)
+
 	if err != nil {
 		return TokenModel{}, err
 	}
@@ -157,12 +144,12 @@ func (cc *MongoTokenController) CreateAccess(tk TokenModel) (string, error) {
 	defer cc.state.Wg.Done()
 
 	// Insert.
-	res, err := cc.accessColl.InsertOne(context.TODO(), tk)
+	_, err := cc.accessColl.InsertOne(context.TODO(), tk)
 	if err != nil {
 		return "", err
 	}
 
-	return res.InsertedID.(primitive.ObjectID).Hex(), nil
+	return tk.ID, nil
 }
 
 func (cc *MongoTokenController) DeleteAccessByID(id string) error {
@@ -172,14 +159,9 @@ func (cc *MongoTokenController) DeleteAccessByID(id string) error {
 
 	cc.state.Wg.Add(1)
 	defer cc.state.Wg.Done()
+	_, err := cc.accessColl.DeleteOne(context.TODO(),
+		bson.D{{Key: "ID", Value: id}})
 
-	// Extract primitive object ID.
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
-
-	_, err = cc.accessColl.DeleteOne(context.TODO(), bson.D{{Key: "_id", Value: objID}})
 	return err
 }
 
@@ -191,15 +173,11 @@ func (cc *MongoTokenController) FindAuthByID(id string) (TokenModel, error) {
 	cc.state.Wg.Add(1)
 	defer cc.state.Wg.Done()
 
-	// Extract primitive object ID.
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return TokenModel{}, err
-	}
-
 	// Find model.
 	var token TokenModel
-	err = cc.authColl.FindOne(context.TODO(), bson.D{{Key: "_id", Value: objID}}).Decode(&token)
+	err := cc.authColl.FindOne(context.TODO(),
+		bson.D{{Key: "ID", Value: id}}).Decode(&token)
+
 	if err != nil {
 		return TokenModel{}, err
 	}
@@ -216,12 +194,12 @@ func (cc *MongoTokenController) CreateAuth(tk TokenModel) (string, error) {
 	defer cc.state.Wg.Done()
 
 	// Insert.
-	res, err := cc.authColl.InsertOne(context.TODO(), tk)
+	_, err := cc.authColl.InsertOne(context.TODO(), tk)
 	if err != nil {
 		return "", err
 	}
 
-	return res.InsertedID.(primitive.ObjectID).Hex(), nil
+	return tk.ID, nil
 }
 
 func (cc *MongoTokenController) DeleteAuthByID(id string) error {
@@ -231,13 +209,8 @@ func (cc *MongoTokenController) DeleteAuthByID(id string) error {
 
 	cc.state.Wg.Add(1)
 	defer cc.state.Wg.Done()
+	_, err := cc.authColl.DeleteOne(context.TODO(),
+		bson.D{{Key: "ID", Value: id}})
 
-	// Extract primitive object ID.
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
-
-	_, err = cc.authColl.DeleteOne(context.TODO(), bson.D{{Key: "_id", Value: objID}})
 	return err
 }
