@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/ufosc/OpenWebServices/pkg/authdb"
 	"github.com/ufosc/OpenWebServices/pkg/authmw"
+	"github.com/ufosc/OpenWebServices/pkg/common"
 	"net/http"
 	"net/url"
 	"time"
@@ -84,6 +85,7 @@ func (cntrl *DefaultAPIController) AuthorizationRoute() gin.HandlerFunc {
 		// Create implicit token.
 		if client.ResponseType == "token" {
 			token := authdb.TokenModel{
+				ID:        common.UUID(),
 				ClientID:  client.ID,
 				UserID:    user.ID,
 				CreatedAt: time.Now().Unix(),
@@ -109,6 +111,7 @@ func (cntrl *DefaultAPIController) AuthorizationRoute() gin.HandlerFunc {
 
 		// Create authorization code.
 		code := authdb.TokenModel{
+			ID:        common.UUID(),
 			ClientID:  client.ID,
 			UserID:    user.ID,
 			CreatedAt: time.Now().Unix(),
@@ -264,6 +267,7 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 
 	// Create access token.
 	atoken := authdb.TokenModel{
+		ID:        common.UUID(),
 		ClientID:  client.ID,
 		UserID:    codeExists.UserID,
 		CreatedAt: time.Now().Unix(),
@@ -282,6 +286,7 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 
 	// Create refresh token.
 	rtoken := authdb.TokenModel{
+		ID:        common.UUID(),
 		ClientID:  client.ID,
 		UserID:    codeExists.UserID,
 		CreatedAt: time.Now().Unix(),
@@ -394,6 +399,7 @@ func (cntrl *DefaultAPIController) handleRefreshToken(c *gin.Context) {
 
 	// Create new access token.
 	atoken := authdb.TokenModel{
+		ID:        common.UUID(),
 		ClientID:  client.ID,
 		UserID:    token.UserID,
 		CreatedAt: time.Now().Unix(),
