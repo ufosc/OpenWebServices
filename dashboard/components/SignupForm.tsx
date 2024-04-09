@@ -4,8 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight } from '@carbon/icons-react'
 import { useTheme, Form, Button, TextInput, Heading } from '@carbon/react'
-import { PostSignup, IsAPIFailure, IsAPISuccess } from '@/APIController/API'
-import { ValidateEmail } from '@/APIController/Validation'
+import { SignUp, ValidateEmail } from '@/API'
 
 const SignupForm = (props: { setView: Function }) => {
   const router = useRouter()
@@ -35,25 +34,11 @@ const SignupForm = (props: { setView: Function }) => {
     }
 
     // Send post request.
-    PostSignup({
-      first_name: form.first_name,
-      last_name: form.last_name,
-      email: form.email,
-      password: form.password,
-      captcha: "123"
-    }).then((res) => {
-      if (IsAPISuccess(res)) {
-        router.push("/verify")
-	return
-      }
-
-      let msg = (IsAPIFailure(res) && typeof res.error != "undefined") ?
-	res.error : "An unknown error has occurred. Please try again later."
-
-      setHasError(msg)
-    }).catch((err) => {
-      setHasError("Server could not be reached. Please try again later")
+    SignUp({first_name: form.first_name, last_name: form.last_name,
+      email: form.email, password: form.password, captcha: "123"
     })
+      .then((res) => router.push("/verify"))
+      .catch((err) => setHasError(err.error_description))
   }
 
   return (

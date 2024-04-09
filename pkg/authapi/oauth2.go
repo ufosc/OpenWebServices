@@ -27,7 +27,8 @@ func (cntrl *DefaultAPIController) AuthorizationRoute() gin.HandlerFunc {
 		// Validate response type
 		if responseType != "code" && responseType != "token" {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "response_type must be 'code' or 'token'",
+				"error":             "invalid_request",
+				"error_description": "response_type must be 'code' or 'token'",
 			})
 			return
 		}
@@ -35,7 +36,8 @@ func (cntrl *DefaultAPIController) AuthorizationRoute() gin.HandlerFunc {
 		// Validate state.
 		if state == "" {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Invalid state",
+				"error":             "invalid_request",
+				"error_description": "state parameter cannot be empty string",
 			})
 			return
 		}
@@ -44,7 +46,8 @@ func (cntrl *DefaultAPIController) AuthorizationRoute() gin.HandlerFunc {
 		client, err := cntrl.db.Clients().FindByID(clientID)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Client not found",
+				"error":             "not_found",
+				"error_description": "client ID not found",
 			})
 			return
 		}
@@ -52,7 +55,8 @@ func (cntrl *DefaultAPIController) AuthorizationRoute() gin.HandlerFunc {
 		redirectDecoded, err := url.QueryUnescape(redirectURI)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Invalid redirect_uri",
+				"error":             "invalid_request",
+				"error_description": "redirect_uri is invalid",
 			})
 			return
 		}
@@ -60,7 +64,8 @@ func (cntrl *DefaultAPIController) AuthorizationRoute() gin.HandlerFunc {
 		// Verify request redirect_uri matches client redirect_uri.
 		if client.RedirectURI != redirectDecoded {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "redirect_uri does not match client-registered redirect_uri",
+				"error":            "invalid_request",
+				"error_descriptor": "wrong redirect_uri",
 			})
 			return
 		}
@@ -158,7 +163,8 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 	clientAny, ok := c.Get("client")
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Client not found",
+			"error":             "not_found",
+			"error_description": "client ID not found",
 		})
 		return
 	}
@@ -167,7 +173,8 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 	client, ok := clientAny.(authdb.ClientModel)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Client not found",
+			"error":             "not_found",
+			"error_description": "client ID not found",
 		})
 		return
 	}
@@ -175,7 +182,8 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 	grantType := c.DefaultQuery("grant_type", "")
 	if grantType != "authorization_code" {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "expected authorization_code grant type",
+			"error":             "invalid_request",
+			"error_description": "expected authorization_code grant type",
 		})
 		return
 	}
@@ -187,7 +195,8 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 	// Ensure required params are non-nil.
 	if code == "" || redirectUri == "" || clientID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Malformed or missing URL parameters",
+			"error":             "invalid_request",
+			"error_description": "Malformed or missing URL parameters",
 		})
 		return
 	}
@@ -196,7 +205,8 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 	codeExists, err := cntrl.db.Tokens().FindAuthByID(code)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "Token expired or could not be found",
+			"error":             "not_found",
+			"error_description": "Token expired or could not be found",
 		})
 		return
 	}
@@ -205,7 +215,8 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 	if (codeExists.CreatedAt + codeExists.TTL) < time.Now().Unix() {
 		cntrl.db.Tokens().DeleteAuthByID(codeExists.ID)
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "Token expired or could not be found",
+			"error":             "not_found",
+			"error_description": "Token expired or could not be found",
 		})
 		return
 	}
@@ -214,7 +225,8 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 	if clientID != codeExists.ClientID {
 		cntrl.db.Tokens().DeleteAuthByID(codeExists.ID)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Token was not issued to this client",
+			"error":             "unauthorized",
+			"error_description": "Token was not issued to this client",
 		})
 		return
 	}
@@ -224,7 +236,8 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 	if err != nil {
 		cntrl.db.Tokens().DeleteAuthByID(codeExists.ID)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "The client associated with this token could not be found",
+			"error":             "not_found",
+			"error_description": "The client associated with this token could not be found",
 		})
 		return
 	}
@@ -233,7 +246,8 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 	if clientExists.RedirectURI != redirectUri {
 		cntrl.db.Tokens().DeleteAuthByID(codeExists.ID)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "redirect_uri and client-registered redirect_uri do not match",
+			"error":             "invalid_request",
+			"error_description": "redirect_uri and client-registered redirect_uri do not match",
 		})
 		return
 	}
@@ -242,7 +256,8 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 	if _, err := cntrl.db.Users().FindByID(codeExists.UserID); err != nil {
 		cntrl.db.Tokens().DeleteAuthByID(codeExists.ID)
 		c.JSON(http.StatusNotFound, gin.H{
-			"error": "The user associated with this token could not be found",
+			"error":             "not_found",
+			"error_description": "The user associated with this token could not be found",
 		})
 		return
 	}
@@ -259,7 +274,8 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 	if err != nil {
 		cntrl.db.Tokens().DeleteAuthByID(codeExists.ID)
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Internal server error. Please try again later",
+			"error":             "internal_server_error",
+			"error_description": "Internal server error. Please try again later",
 		})
 		return
 	}
@@ -277,7 +293,8 @@ func (cntrl *DefaultAPIController) handleAuthCode(c *gin.Context) {
 		cntrl.db.Tokens().DeleteAccessByID(aid)
 		cntrl.db.Tokens().DeleteAuthByID(codeExists.ID)
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Internal server error. Please try again later",
+			"error":             "internal_server_error",
+			"error_description": "Internal server error. Please try again later",
 		})
 		return
 	}
@@ -301,7 +318,8 @@ func (cntrl *DefaultAPIController) handleRefreshToken(c *gin.Context) {
 	clientAny, ok := c.Get("client")
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Client not found",
+			"error":             "not_found",
+			"error_description": "Client not found",
 		})
 		return
 	}
@@ -310,7 +328,8 @@ func (cntrl *DefaultAPIController) handleRefreshToken(c *gin.Context) {
 	client, ok := clientAny.(authdb.ClientModel)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Client not found",
+			"error":             "not_found",
+			"error_description": "Client not found",
 		})
 		return
 	}
@@ -318,7 +337,8 @@ func (cntrl *DefaultAPIController) handleRefreshToken(c *gin.Context) {
 	grantType := c.DefaultQuery("grant_type", "")
 	if grantType != "refresh_token" {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "expected refresh_token grant type",
+			"error":             "invalid_request",
+			"error_description": "expected refresh_token grant type",
 		})
 		return
 	}
@@ -326,7 +346,8 @@ func (cntrl *DefaultAPIController) handleRefreshToken(c *gin.Context) {
 	refreshToken := c.DefaultQuery("refresh_token", "")
 	if refreshToken == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "invalid refresh token",
+			"error":             "invalid_request",
+			"error_description": "invalid refresh token",
 		})
 		return
 	}
@@ -335,7 +356,8 @@ func (cntrl *DefaultAPIController) handleRefreshToken(c *gin.Context) {
 	token, err := cntrl.db.Tokens().FindRefreshByID(refreshToken)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Refresh token expired or could not be found",
+			"error":             "not_found",
+			"error_description": "Refresh token expired or could not be found",
 		})
 		return
 	}
@@ -344,7 +366,8 @@ func (cntrl *DefaultAPIController) handleRefreshToken(c *gin.Context) {
 	if (token.CreatedAt + token.TTL) > time.Now().Unix() {
 		cntrl.db.Tokens().DeleteRefreshByID(token.ID)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Refresh token expired or could not be found",
+			"error":             "not_found",
+			"error_description": "Refresh token expired or could not be found",
 		})
 		return
 	}
@@ -353,7 +376,8 @@ func (cntrl *DefaultAPIController) handleRefreshToken(c *gin.Context) {
 	// authenticated client.
 	if token.ClientID != client.ID {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "Refresh token was not issued to this client",
+			"error":             "not_found",
+			"error_description": "Refresh token was not issued to this client",
 		})
 		return
 	}
@@ -362,7 +386,8 @@ func (cntrl *DefaultAPIController) handleRefreshToken(c *gin.Context) {
 	if _, err := cntrl.db.Users().FindByID(token.UserID); err != nil {
 		cntrl.db.Tokens().DeleteRefreshByID(token.ID)
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "the user associated with this token could not be found",
+			"error":             "not_found",
+			"error_description": "the user associated with this token could not be found",
 		})
 		return
 	}
@@ -379,7 +404,8 @@ func (cntrl *DefaultAPIController) handleRefreshToken(c *gin.Context) {
 	atokenID, err := cntrl.db.Tokens().CreateAccess(atoken)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "internal server error. Please try again later",
+			"error":             "internal_server_error",
+			"error_description": "internal server error. Please try again later",
 		})
 		return
 	}

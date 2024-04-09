@@ -1,6 +1,6 @@
 'use client'
 
-import { UpdateUser, IsAPISuccess, IsAPIFailure } from '@/APIController/API'
+import { UpdateUser } from '@/API'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { useCookies } from 'next-client-cookies'
@@ -72,20 +72,10 @@ export default function MyAccount({ user } : any) {
 
     UpdateUser(newData.first_name, newData.last_name, token as string)
       .then((res) => {
-	if (IsAPISuccess(res)) {
-	  setHasSuccess(true)
-	  setIsEditing(false)
-	  return
-	}
-
-	let msg = (IsAPIFailure(res) &&
-          typeof res.error_description !== "undefined") ?
-	  res.error_description :
-          "An unknown error has occurred. Please try again later."
-
-	setHasError(msg)
+        setHasSuccess(true)
+	setIsEditing(false)
       }).catch((err) => {
-	setHasError("Server could not be reached. Please try again later")
+	setHasError(err.error_description)
       })
   }
 

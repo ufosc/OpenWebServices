@@ -25,21 +25,24 @@ func (cntrl *DefaultAPIController) SignUpRoute() gin.HandlerFunc {
 		// Extract JSON body.
 		if err := c.BindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Missing required fields",
+				"error":             "invalid_request",
+				"error_description": "Missing required fields",
 			})
 			return
 		}
 
 		if len(req.FirstName) < 2 || len(req.LastName) < 2 {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "first and/or last name are too short",
+				"error":             "invalid_request",
+				"error_description": "first and/or last name are too short",
 			})
 			return
 		}
 
 		if len(req.FirstName) > 20 || len(req.LastName) > 20 {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "first and/or last name are too long (> 20 chars)",
+				"error":             "invalid_request",
+				"error_description": "first and/or last name are too long (> 20 chars)",
 			})
 			return
 		}
@@ -47,7 +50,8 @@ func (cntrl *DefaultAPIController) SignUpRoute() gin.HandlerFunc {
 		// Validate Email.
 		if !common.ValidateEmail(req.Email) {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "invalid email address",
+				"error":             "invalid_request",
+				"error_description": "invalid email address",
 			})
 			return
 		}
@@ -55,7 +59,8 @@ func (cntrl *DefaultAPIController) SignUpRoute() gin.HandlerFunc {
 		// Ensure password is sufficiently strong.
 		if err := common.ValidatePassword(req.Password); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": fmt.Sprint(err),
+				"error":             "invalid_request",
+				"error_description": fmt.Sprint(err),
 			})
 			return
 		}
@@ -63,7 +68,8 @@ func (cntrl *DefaultAPIController) SignUpRoute() gin.HandlerFunc {
 		// Ensure email is unique.
 		if _, err := cntrl.db.Users().FindByEmail(req.Email); err == nil {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "An account already exists with this email",
+				"error":             "invalid_request",
+				"error_description": "An account already exists with this email",
 			})
 			return
 		}
@@ -71,7 +77,8 @@ func (cntrl *DefaultAPIController) SignUpRoute() gin.HandlerFunc {
 		// Ensure verification email hasn't already been sent.
 		if _, err := cntrl.db.Users().FindPendingByEmail(req.Email); err == nil {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Please verify your email address. If you have not received an email, " +
+				"error": "verify_email",
+				"error_description": "Please verify your email address. If you have not received an email, " +
 					"please check your spam folder and wait up to 10 minutes before trying again",
 			})
 			return
@@ -83,7 +90,8 @@ func (cntrl *DefaultAPIController) SignUpRoute() gin.HandlerFunc {
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Internal server error. Please try again later",
+				"error":             "internal_server_error",
+				"error_description": "Internal server error. Please try again later",
 			})
 			return
 		}
@@ -108,7 +116,8 @@ func (cntrl *DefaultAPIController) SignUpRoute() gin.HandlerFunc {
 		id, err := cntrl.db.Users().CreatePending(pendingUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Internal server error. Please try again later",
+				"error":             "internal_server_error",
+				"error_description": "Internal server error. Please try again later",
 			})
 			return
 		}
@@ -117,7 +126,8 @@ func (cntrl *DefaultAPIController) SignUpRoute() gin.HandlerFunc {
 		if !cntrl.SendVerification(id, pendingUser.Email) {
 			cntrl.db.Users().DeletePendingByID(id)
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Internal server error. Please try again later",
+				"error":             "internal_server_error",
+				"error_description": "Internal server error. Please try again later",
 			})
 			return
 		}
@@ -139,7 +149,8 @@ func (cntrl *DefaultAPIController) SignInRoute() gin.HandlerFunc {
 		// Extract JSON body.
 		if err := c.BindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Missing required fields",
+				"error":             "invalid_request",
+				"error_description": "Missing required fields",
 			})
 			return
 		}
@@ -148,14 +159,16 @@ func (cntrl *DefaultAPIController) SignInRoute() gin.HandlerFunc {
 		userExists, err := cntrl.db.Users().FindByEmail(req.Email)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Incorrect username or password",
+				"error":             "unauthorized",
+				"error_description": "Incorrect username or password",
 			})
 			return
 		}
 
 		if !common.VerifyPassword(userExists.Password, req.Password) {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Incorrect username or password",
+				"error":             "unauthorized",
+				"error_description": "Incorrect username or password",
 			})
 			return
 		}
@@ -170,7 +183,8 @@ func (cntrl *DefaultAPIController) SignInRoute() gin.HandlerFunc {
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "internal server error",
+				"error":             "internal_server_error",
+				"error_description": "internal server error. Please try again later.",
 			})
 			return
 		}
@@ -188,7 +202,8 @@ func (cntrl *DefaultAPIController) VerifyEmailRoute() gin.HandlerFunc {
 		ref := c.Param("ref")
 		if ref == "" {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Invalid URL",
+				"error":             "invalid_request",
+				"error_description": "Invalid URL",
 			})
 			return
 		}
@@ -196,7 +211,8 @@ func (cntrl *DefaultAPIController) VerifyEmailRoute() gin.HandlerFunc {
 		pending, err := cntrl.db.Users().FindPendingByID(ref)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Invalid URL",
+				"error":             "invalid_request",
+				"error_description": "Invalid URL",
 			})
 			return
 		}
@@ -204,7 +220,8 @@ func (cntrl *DefaultAPIController) VerifyEmailRoute() gin.HandlerFunc {
 		// Delete pending user model.
 		if err := cntrl.db.Users().DeletePendingByID(ref); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Internal server error. Please try again later",
+				"error":             "internal_server_error",
+				"error_description": "Internal server error. Please try again later",
 			})
 			return
 		}
@@ -215,7 +232,8 @@ func (cntrl *DefaultAPIController) VerifyEmailRoute() gin.HandlerFunc {
 		// Sign up.
 		if _, err := cntrl.db.Users().Create(pending.User); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Internal server error. Please try again later",
+				"error":             "internal_server_error",
+				"error_description": "Internal server error. Please try again later",
 			})
 			return
 		}

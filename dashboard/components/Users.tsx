@@ -1,5 +1,6 @@
 'use client'
 
+import { GetUsers, DeleteUser, UpdateUserRealms } from '@/API'
 import TableView from './TableView'
 import { useState, useEffect } from 'react'
 import { useCookies } from 'next-client-cookies'
@@ -10,11 +11,6 @@ import {
   Loading, InlineNotification, Modal, ModalBody,
   Form, TextInput, FormGroup, Checkbox, Button,
 } from '@carbon/react'
-
-import {
-  GetUsers, DeleteUser,
-  IsAPISuccess, IsAPIFailure, UpdateUserRealms
-} from '@/APIController/API'
 
 // IBM Carbon is serious dogshit.
 import PaginationNav from '@carbon/react/lib/components/PaginationNav/PaginationNav'
@@ -86,12 +82,6 @@ export default function Users() {
 
   const fetchTable = () => {
     GetUsers(page, token as string).then((res) => {
-      if (!IsAPISuccess(res)) {
-        cookies.remove('ows-access-tokens')
-        router.push('/authorize')
-        return
-      }
-
       setRows((res as UsersResponse).users.map(user => {
         let text = ""
         for (let i = 0; i < user.realms.length; ++i) {
@@ -109,13 +99,13 @@ export default function Users() {
       if (pageCount !== numPages && pageCount > 0) {
         setNumPages(pageCount)
       }
-
     }).catch((err) => {
       cookies.remove('ows-access-tokens')
       router.push("/authorize")
     })
   }
 
+  // Update the table every time the page is changed.
   useEffect(fetchTable, [page])
 
   const pageChange = (newPage : number) => {
@@ -130,11 +120,8 @@ export default function Users() {
     setIsLoading(true)
     let hasError = false
     for (let i = 0; i < selectedRows.length; ++i) {
-      await DeleteUser(selectedRows[i].id, token as string).then((res) => {
-        if (IsAPIFailure(res)) {
-          hasError = true
-        }
-      }).catch(err => { hasError = true })
+      await DeleteUser(selectedRows[i].id, token as string)
+        .catch(err => { hasError = true })
     }
 
     if (hasError) {
@@ -210,58 +197,51 @@ export default function Users() {
       realms: realms,
     }
 
-    UpdateUserRealms(form, modifyUserForm.id, token).then((res) => {
-      setModifyUserForm({
-        id: "",
-        first_name: "",
-        last_name: "",
-        scope: {
-          clients_read: false,
-          clients_delete: false,
-          clients_create: false,
-          users_read: false,
-          users_delete: false,
-          users_update: false,
-        }
-      })
+    UpdateUserRealms(form, modifyUserForm.id, token)
+      .then((res) => {
+        setModifyUserForm({
+          id: "",
+          first_name: "",
+          last_name: "",
+          scope: {
+            clients_read: false,
+            clients_delete: false,
+            clients_create: false,
+            users_read: false,
+            users_delete: false,
+            users_update: false,
+          }
+        })
 
-      if (IsAPISuccess(res)) {
         setUserModal(false)
         setNotifData({
           title: "Success",
-          subtitle: "User modified succesfully",
+          subtitle: "User modified successfully",
           kind: "success",
         })
         setHasNotif(true)
         setTimeout(() => { setHasNotif(false) }, 5000)
         fetchTable()
-        return
-      }
-
-      if (IsAPIFailure(res) && res.error == 'insufficient_scope') {
+      })
+      .catch((err) => {
         setUserModal(false)
-        setNotifData({
-          title: "Error Modifying User",
-          subtitle: "You are not authorized to modify users",
-          kind: "error",
-        })
+        if (err.error == 'insufficient_scope') {
+          setNotifData({
+            title: "Error Modifying User",
+            subtitle: "You are not authorized to modify users",
+            kind: "error",
+          })
+        } else {
+          setNotifData({
+            title: "Error",
+            subtitle: err.error_description,
+            kind: "error",
+          })
+        }
+
         setHasNotif(true)
         setTimeout(() => { setHasNotif(false) }, 5000)
-        return
-      }
-
-      let msg = (IsAPIFailure(res) && typeof res.error !== "undefined") ?
-        res.error : "An unknown error has occured. Please try again later."
-
-      setUserModal(false)
-      setNotifData({
-        title: "Error",
-        subtitle: msg,
-        kind: "error",
       })
-      setHasNotif(true)
-      setTimeout(() => { setHasNotif(false) }, 5000)
-    })
   }
 
   return (
