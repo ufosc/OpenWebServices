@@ -17,6 +17,10 @@ import {
 // Data table headers.
 const headers = [
   {
+    key: 'id',
+    header: 'Client ID',
+  },
+  {
     key: 'name',
     header: 'Name',
   },
