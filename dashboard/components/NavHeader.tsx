@@ -4,6 +4,7 @@ import { useContext } from 'react'
 import { UserAvatar, Asleep, Awake, Logout } from '@carbon/icons-react'
 import { useCookies } from 'next-client-cookies'
 import { useRouter } from 'next/navigation'
+import { VERSION } from '@/config'
 
 import { Header, HeaderContainer, HeaderName, HeaderGlobalBar,
   HeaderGlobalAction, SkipToContent, useTheme } from '@carbon/react'
@@ -38,7 +39,7 @@ const NavHeader = (props : { setTheme: Function }) => {
       <Header aria-label="OpenWebServices">
         <SkipToContent />
         <HeaderName href="/" prefix="UF">OpenWebServices</HeaderName>
-	<p>v0.1.4-alpha</p>
+	<p>{VERSION}</p>
 	<HeaderGlobalBar>
 	  { themeSelector() }
 	  {
