@@ -1,15 +1,14 @@
 {
   "name": "semester-stats",
   "version": "1.0.0",
-  "description": "Developed for a statistics page on the club website",
-  "main": "index.js",
+  "description": "A simple API to get the stats for all the repositories in an organization in a single request, caching the data in a MongoDB database",
+  "main": "dist/index.js",
   "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
     "dev": "npx ts-node-dev src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "@types/express": "^4.17.21",
     "@types/node": "^22.5.5",

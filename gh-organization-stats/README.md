@@ -15,7 +15,7 @@ npm install
 ## Usage
 <b>Starting the development server:</b>
 ```
-npm run develop
+npm run dev
 ```
 You may access the server at http://localhost:8000
 
